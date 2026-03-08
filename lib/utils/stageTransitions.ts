@@ -1,5 +1,5 @@
 import { orderedProgressStages, stageDefinitions } from '@/lib/data/stages';
-import { Case, CaseStage, Task } from '@/types';
+import { Case, CaseStage, Document, Task } from '@/types';
 
 const nextMap: Partial<Record<CaseStage, CaseStage>> = {
   'new-referral': 'patient-onboarding',
@@ -33,14 +33,57 @@ export function getVisibleProgressIndex(stage: CaseStage) {
   return 0;
 }
 
-export function maybeAdvanceCaseStage(currentCase: Case, caseTasks: Task[]): CaseStage | undefined {
+export function checkHardBlocksCleared(caseId: string, documents: Document[]): { cleared: boolean; missing: Document[] } {
+  const caseDocuments = documents.filter((document) => document.caseId === caseId);
+  const missingHardBlocks = caseDocuments.filter((document) => document.isHardBlock && document.status !== 'validated');
+
+  return {
+    cleared: missingHardBlocks.length === 0,
+    missing: missingHardBlocks
+  };
+}
+
+export function canAdvanceFromRecordsCollection(
+  currentCase: Case,
+  documents: Document[],
+  hasPartialPacketDecision: boolean
+): { canAdvance: boolean; reason?: string; missingDocs?: Document[] } {
+  const { cleared, missing } = checkHardBlocksCleared(currentCase.id, documents);
+
+  if (cleared) {
+    return { canAdvance: true };
+  }
+
+  if (hasPartialPacketDecision) {
+    return { canAdvance: true, reason: 'Advancing with Senior Coordinator override' };
+  }
+
+  return {
+    canAdvance: false,
+    reason: `Hard-block documents missing: ${missing.map((document) => document.name).join(', ')}`,
+    missingDocs: missing
+  };
+}
+
+export function maybeAdvanceCaseStage(
+  currentCase: Case,
+  caseTasks: Task[],
+  caseDocuments?: Document[]
+): CaseStage | undefined {
+  // Initial screening requires explicit routing decision by Front Desk.
+  if (currentCase.stage === 'initial-screening') return undefined;
+
   const pendingBlocking = caseTasks.some((task) => task.status !== 'completed' && task.priority !== 'low');
   if (pendingBlocking) return undefined;
+
+  if (currentCase.stage === 'records-collection' && caseDocuments) {
+    const { cleared } = checkHardBlocksCleared(currentCase.id, caseDocuments);
+    if (!cleared) return undefined;
+  }
+
   return getNextStage(currentCase.stage);
 }
 
 export function stageDisplay(stage: CaseStage) {
-  return (
-    stageDefinitions.find((s) => s.id === stage)?.name ?? stage
-  );
+  return stageDefinitions.find((s) => s.id === stage)?.name ?? stage;
 }

@@ -11,14 +11,18 @@ import { QueueTabs } from '@/components/dashboard/QueueTabs';
 import { CaseQueue } from '@/components/dashboard/CaseQueue';
 import { Button } from '@/components/ui/button';
 import { LogExternalStepModal } from '@/components/modals/LogExternalStepModal';
+import { ScreeningRoutingModal } from '@/components/modals/ScreeningRoutingModal';
+import { Case } from '@/types';
+import { DashboardSkeleton } from '@/components/shared/LoadingSkeleton';
 
 const queueTabs = [
   { id: 'all', label: 'All' },
   { id: 'intake', label: 'Intake/TODOs' },
+  { id: 'ie-review', label: 'I/E Review' },
+  { id: 'initial-screening', label: 'Route Screening' },
   { id: 'doc-review', label: 'Doc Review' },
   { id: 'missing-info', label: 'Missing Info' },
   { id: 'scheduling', label: 'Scheduling' },
-  { id: 'ie-review', label: 'I/E Review' },
   { id: 'end-letters', label: 'End Letters' }
 ] as const;
 
@@ -28,12 +32,14 @@ export default function FrontDeskDashboardPage() {
   useRequireAuth();
 
   const router = useRouter();
-  const { cases, tasks, documents, completeTask, validateDocument, logExternalStep } = useCases();
+  const { hydrated, cases, tasks, documents, completeTask, validateDocument, logExternalStep, routeInitialScreening } = useCases();
   const { notify } = useNotification();
 
   const [activeTab, setActiveTab] = useState<QueueTabId>('all');
   const [externalOpen, setExternalOpen] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [routingModalOpen, setRoutingModalOpen] = useState(false);
+  const [routingCase, setRoutingCase] = useState<Case | null>(null);
 
   const frontDeskPending = useMemo(
     () => tasks.filter((task) => task.assignedToRole === 'front-desk' && task.status !== 'completed'),
@@ -80,7 +86,14 @@ export default function FrontDeskDashboardPage() {
       );
     }
     if (activeTab === 'ie-review') {
-      return candidates.filter((currentCase) => ['review-ie-responses', 'confirm-ie-review'].includes(taskByCase[currentCase.id]?.type ?? ''));
+      return candidates.filter((currentCase) =>
+        ['review-ie-responses', 'confirm-ie-review'].includes(taskByCase[currentCase.id]?.type ?? '')
+      );
+    }
+    if (activeTab === 'initial-screening') {
+      return cases.filter(
+        (currentCase) => currentCase.stage === 'initial-screening' && currentCase.ieConfirmReviewComplete
+      );
     }
     return candidates.filter((currentCase) => taskByCase[currentCase.id]?.type === 'send-end-letter');
   }, [activeTab, cases, frontDeskPending, taskByCase, documents]);
@@ -90,6 +103,22 @@ export default function FrontDeskDashboardPage() {
 
     filteredCases.forEach((currentCase) => {
       const task = taskByCase[currentCase.id];
+
+      if (currentCase.stage === 'initial-screening' && currentCase.ieConfirmReviewComplete) {
+        actionMap[currentCase.id] = (
+          <Button
+            size='sm'
+            onClick={() => {
+              setRoutingCase(currentCase);
+              setRoutingModalOpen(true);
+            }}
+          >
+            Route Case →
+          </Button>
+        );
+        return;
+      }
+
       if (!task) return;
 
       if (task.type === 'review-document') {
@@ -186,6 +215,13 @@ export default function FrontDeskDashboardPage() {
     return actionMap;
   }, [filteredCases, taskByCase, documents, validateDocument, completeTask, notify, router]);
 
+  const selectedExternalTask = selectedTaskId ? tasks.find((task) => task.id === selectedTaskId) : undefined;
+  const selectedExternalCase = selectedExternalTask ? cases.find((currentCase) => currentCase.id === selectedExternalTask.caseId) : undefined;
+
+  if (!hydrated) {
+    return <DashboardSkeleton />;
+  }
+
   return (
     <div className='space-y-6'>
       <div className='flex flex-wrap items-center justify-between gap-2'>
@@ -215,7 +251,11 @@ export default function FrontDeskDashboardPage() {
           <div>
             <h2 className='mb-2 text-sm font-semibold uppercase tracking-wide text-red-600'>Overdue</h2>
             <CaseQueue
-              cases={filteredCases.filter((currentCase) => taskByCase[currentCase.id]?.slaStatus === 'overdue')}
+              cases={filteredCases.filter((currentCase) =>
+                activeTab === 'initial-screening'
+                  ? currentCase.slaStatus === 'overdue'
+                  : taskByCase[currentCase.id]?.slaStatus === 'overdue'
+              )}
               taskByCaseId={taskByCase}
               actionsByCaseId={actionsByCaseId}
             />
@@ -224,7 +264,11 @@ export default function FrontDeskDashboardPage() {
           <div>
             <h2 className='mb-2 text-sm font-semibold uppercase tracking-wide text-amber-600'>Due Today / At Risk</h2>
             <CaseQueue
-              cases={filteredCases.filter((currentCase) => taskByCase[currentCase.id]?.slaStatus === 'at-risk')}
+              cases={filteredCases.filter((currentCase) =>
+                activeTab === 'initial-screening'
+                  ? currentCase.slaStatus === 'at-risk'
+                  : taskByCase[currentCase.id]?.slaStatus === 'at-risk'
+              )}
               taskByCaseId={taskByCase}
               actionsByCaseId={actionsByCaseId}
             />
@@ -233,7 +277,11 @@ export default function FrontDeskDashboardPage() {
           <div>
             <h2 className='mb-2 text-sm font-semibold uppercase tracking-wide text-emerald-600'>On Track</h2>
             <CaseQueue
-              cases={filteredCases.filter((currentCase) => taskByCase[currentCase.id]?.slaStatus === 'on-track')}
+              cases={filteredCases.filter((currentCase) =>
+                activeTab === 'initial-screening'
+                  ? currentCase.slaStatus === 'on-track'
+                  : taskByCase[currentCase.id]?.slaStatus === 'on-track'
+              )}
               taskByCaseId={taskByCase}
               actionsByCaseId={actionsByCaseId}
             />
@@ -244,8 +292,9 @@ export default function FrontDeskDashboardPage() {
       <LogExternalStepModal
         open={externalOpen}
         onOpenChange={setExternalOpen}
+        currentCase={selectedExternalCase}
         onSubmit={({ title, externalSystem, notes, markAsContactAttempt }) => {
-          const selectedTask = tasks.find((task) => task.id === selectedTaskId);
+          const selectedTask = selectedExternalTask;
           if (!selectedTask) return;
           logExternalStep({
             caseId: selectedTask.caseId,
@@ -258,6 +307,23 @@ export default function FrontDeskDashboardPage() {
           notify('EXTERNAL STEP logged');
         }}
       />
+
+      {routingCase ? (
+        <ScreeningRoutingModal
+          open={routingModalOpen}
+          onOpenChange={(open) => {
+            setRoutingModalOpen(open);
+            if (!open) setRoutingCase(null);
+          }}
+          currentCase={routingCase}
+          onRoute={(destination, notes) => {
+            routeInitialScreening(routingCase.id, destination, notes);
+            notify(destination === 'financial' ? 'Case routed to Financial Screening' : 'Case routed to Senior Coordinator');
+            setRoutingCase(null);
+            setRoutingModalOpen(false);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

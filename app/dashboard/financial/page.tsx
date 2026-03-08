@@ -10,11 +10,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SendMessageModal } from '@/components/modals/SendMessageModal';
 import { EndReferralModal } from '@/components/modals/EndReferralModal';
 import { Case } from '@/types';
+import { DashboardSkeleton } from '@/components/shared/LoadingSkeleton';
 
 export default function FinancialDashboardPage() {
   useRequireAuth();
 
-  const { cases, tasks, completeTask, setCaseStage, sendMessage, endReferral } = useCases();
+  const { hydrated, cases, tasks, completeTask, setCaseStage, sendMessage, endReferral, addCaseFlag, removeCaseFlag } = useCases();
   const { notify } = useNotification();
 
   const [messageCase, setMessageCase] = useState<Case | null>(null);
@@ -33,6 +34,10 @@ export default function FinancialDashboardPage() {
         }, {}),
     [tasks]
   );
+
+  if (!hydrated) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className='space-y-6'>
@@ -86,6 +91,7 @@ export default function FinancialDashboardPage() {
                       size='sm'
                       onClick={() => {
                         setCaseStage(currentCase.id, 'records-collection');
+                        removeCaseFlag(currentCase.id, 'Needs Clarification');
                         const task = financialTasksByCase[currentCase.id];
                         if (task) completeTask(task.id, 'Financially cleared.');
                         notify('Financial screening cleared');
@@ -152,7 +158,8 @@ export default function FinancialDashboardPage() {
               markAsContactAttempt,
               channel: 'in-app'
             });
-            notify('Message sent to patient');
+            addCaseFlag(messageCase.id, 'Needs Clarification');
+            notify('Clarification request sent');
           }}
         />
       ) : null}

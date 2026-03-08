@@ -10,12 +10,14 @@ import { DecisionPanel } from '@/components/dashboard/DecisionPanel';
 import { AssignPTCModal } from '@/components/modals/AssignPTCModal';
 import { Button } from '@/components/ui/button';
 import { SLAIndicator } from '@/components/shared/SLAIndicator';
+import { DashboardSkeleton } from '@/components/shared/LoadingSkeleton';
 
 const decisionTabMap = [
   { id: 'all', label: 'All', matcher: () => true },
   { id: 'assign-ptc', label: 'Assign PTC', matcher: (type: string, title: string) => type === 'screening-routing' || title.includes('Assign PTC') },
   { id: 'screening-override', label: 'Screening Override', matcher: (type: string) => type === 'screening-override' },
   { id: 'partial-packet', label: 'Partial Packet', matcher: (type: string) => type === 'partial-packet' || type === 'hard-block-override' },
+  { id: 'specialist-conflict', label: 'Specialist Conflict', matcher: (type: string) => type === 'specialist-conflict' },
   { id: 'final-decision', label: 'Final Decision', matcher: (type: string) => type === 'final-decision' },
   { id: 'no-response-3x', label: 'No Response 3x', matcher: (type: string) => type === 'no-response-3x' },
   { id: 're-referral', label: 'Re-Referral', matcher: (type: string) => type === 're-referral-eligibility' }
@@ -26,7 +28,7 @@ type DecisionTabId = (typeof decisionTabMap)[number]['id'];
 export default function SeniorDashboardPage() {
   useRequireAuth();
 
-  const { decisions, cases, recordDecision, assignPTC } = useCases();
+  const { hydrated, decisions, cases, documents, recordDecision, assignPTC } = useCases();
   const { notify } = useNotification();
 
   const [activeTab, setActiveTab] = useState<DecisionTabId>('all');
@@ -53,6 +55,10 @@ export default function SeniorDashboardPage() {
 
   const selectedDecision = queue.find((decision) => decision.id === selectedDecisionId) ?? queue[0];
   const selectedCase = selectedDecision ? cases.find((currentCase) => currentCase.id === selectedDecision.caseId) : undefined;
+
+  if (!hydrated) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className='space-y-6'>
@@ -113,6 +119,8 @@ export default function SeniorDashboardPage() {
         <section>
           <DecisionPanel
             decision={selectedDecision}
+            currentCase={selectedCase}
+            documents={documents}
             onSubmit={(option, rationale) => {
               if (!selectedDecision) return;
               recordDecision(selectedDecision.id, option, rationale);

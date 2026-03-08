@@ -9,10 +9,11 @@ import { MiniPipeline } from '@/components/dashboard/MiniPipeline';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SLAIndicator } from '@/components/shared/SLAIndicator';
+import { DashboardSkeleton } from '@/components/shared/LoadingSkeleton';
 
 export default function PTCDashboardPage() {
   const { currentUser } = useRequireAuth();
-  const { cases, tasks, takePatient } = useCases();
+  const { hydrated, cases, tasks, takePatient } = useCases();
   const { notify } = useNotification();
 
   const myCases = useMemo(
@@ -52,6 +53,10 @@ export default function PTCDashboardPage() {
       }, {}),
     [tasks]
   );
+
+  if (!hydrated) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className='space-y-6'>

@@ -41,12 +41,15 @@ export function Header() {
             variant='secondary'
             size='sm'
             onClick={() => {
-              resetDemoData();
-              notify('Demo data reset successfully');
+              if (window.confirm('Reset all demo data to initial state? This cannot be undone.')) {
+                resetDemoData();
+                notify('Demo data reset successfully');
+                window.location.reload();
+              }
             }}
           >
             <RefreshCw className='mr-2 h-3.5 w-3.5' />
-            Reset Demo Data
+            Reset Demo
           </Button>
 
           <div className='text-right'>

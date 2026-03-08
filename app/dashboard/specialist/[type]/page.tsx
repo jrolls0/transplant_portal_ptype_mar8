@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SLAIndicator } from '@/components/shared/SLAIndicator';
 import { SpecialistReviewModal } from '@/components/modals/SpecialistReviewModal';
+import { DashboardSkeleton } from '@/components/shared/LoadingSkeleton';
 
 const typeMap: Record<string, { role: UserRole; title: string }> = {
   dietitian: { role: 'dietitian', title: 'Dietitian Dashboard' },
@@ -24,7 +25,7 @@ export default function SpecialistDashboardPage() {
   const params = useParams<{ type: string }>();
   const specialist = typeMap[params.type] ?? typeMap.dietitian;
 
-  const { tasks, cases, completeTask, createTask, sendMessage } = useCases();
+  const { hydrated, tasks, cases, setTaskStatus, completeTask, createTask, createDecision, addCaseFlag, sendMessage } = useCases();
   const { notify } = useNotification();
 
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -35,6 +36,10 @@ export default function SpecialistDashboardPage() {
   );
 
   const pendingClarification = reviewTasks.filter((task) => task.status === 'in-progress');
+
+  if (!hydrated) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className='space-y-6'>
@@ -150,6 +155,7 @@ export default function SpecialistDashboardPage() {
             if (!currentCase) return;
 
             if (outcome === 'needs-clarification') {
+              setTaskStatus(selectedTask.id, 'in-progress', `Clarification requested - ${notes || 'Awaiting additional information.'}`);
               createTask({
                 caseId: currentCase.id,
                 title: `${specialist.title.replace(' Dashboard', '')} Clarification Follow-up`,
@@ -167,21 +173,34 @@ export default function SpecialistDashboardPage() {
                 channel: 'in-app'
               });
               notify('Clarification request sent');
-            } else {
-              completeTask(selectedTask.id, outcome === 'clear' ? 'Cleared' : `Escalated to Senior - ${notes}`);
-              if (outcome === 'escalate') {
-                createTask({
-                  caseId: currentCase.id,
-                  title: 'Specialist Conflict Review',
-                  type: 'screening-override',
-                  assignedToRole: 'senior-coordinator',
-                  dueDate: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-                  description: notes,
-                  isExternalStep: false
-                });
-              }
-              notify(outcome === 'clear' ? 'Task completed successfully' : 'Escalation sent to senior coordinator');
+            } else if (outcome === 'clear') {
+              completeTask(selectedTask.id, `Cleared - ${notes || 'No concerns identified.'}`);
+              notify('Review completed - Cleared');
+            } else if (outcome === 'escalate') {
+              completeTask(selectedTask.id, `ESCALATED to Senior Coordinator - ${notes}`);
+
+              createTask({
+                caseId: currentCase.id,
+                title: `${specialist.title.replace(' Dashboard', '')} Escalation Review`,
+                type: 'screening-override',
+                assignedToRole: 'senior-coordinator',
+                dueDate: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
+                description: `${specialist.title.replace(' Dashboard', '')} raised concern: ${notes}`,
+                isExternalStep: false,
+                priority: 'urgent'
+              });
+
+              addCaseFlag(currentCase.id, 'Specialist Concern');
+              createDecision({
+                caseId: currentCase.id,
+                type: 'specialist-conflict',
+                title: `${specialist.title.replace(' Dashboard', '')} Concern - Review Required`,
+                options: ['Proceed despite concern', 'Request additional information', 'End referral']
+              });
+              notify('Escalation sent to Senior Coordinator');
             }
+
+            setSelectedTask(null);
           }}
         />
       ) : null}

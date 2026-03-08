@@ -1,21 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Case } from '@/types';
+import { Case, Decision } from '@/types';
 import { Button } from '@/components/ui/button';
 import { EndReferralModal } from '@/components/modals/EndReferralModal';
 import { ReReferralModal } from '@/components/modals/ReReferralModal';
 import { endReasons } from '@/lib/data/endReasons';
+import { buildEndLetter } from '@/lib/context/CaseContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface EndReferralTabProps {
   currentCase: Case;
+  decisions?: Decision[];
   onEndReferral: (payload: { reasonCode: string; rationale: string; letterDraft: string }) => void;
   onStartReReferral: () => void;
 }
 
-export function EndReferralTab({ currentCase, onEndReferral, onStartReReferral }: EndReferralTabProps) {
+export function EndReferralTab({ currentCase, decisions, onEndReferral, onStartReReferral }: EndReferralTabProps) {
   const [endOpen, setEndOpen] = useState(false);
   const [reReferralOpen, setReReferralOpen] = useState(false);
+  const [letterModalOpen, setLetterModalOpen] = useState(false);
+  const [viewingLetter, setViewingLetter] = useState('');
 
   if (currentCase.stage === 'ended') {
     const reason = endReasons.find((item) => item.code === currentCase.endReason);
@@ -30,11 +35,44 @@ export function EndReferralTab({ currentCase, onEndReferral, onStartReReferral }
 
           <div className='mt-4 flex flex-wrap gap-2'>
             <Button onClick={() => setReReferralOpen(true)}>Start Re-Referral</Button>
-            <Button variant='secondary'>View End Letter</Button>
+            <Button
+              variant='secondary'
+              onClick={() => {
+                const endDecision = decisions?.find(
+                  (decision) => decision.caseId === currentCase.id && decision.type === 'end-referral' && decision.letterDraft
+                );
+                const letter = endDecision?.letterDraft ?? buildEndLetter(currentCase.endReason || '', currentCase.patient.lastName);
+                setViewingLetter(letter);
+                setLetterModalOpen(true);
+              }}
+            >
+              View End Letter
+            </Button>
           </div>
         </section>
 
         <ReReferralModal open={reReferralOpen} onOpenChange={setReReferralOpen} currentCase={currentCase} onStart={onStartReReferral} />
+
+        <Dialog open={letterModalOpen} onOpenChange={setLetterModalOpen}>
+          <DialogContent className='max-w-2xl'>
+            <DialogHeader>
+              <DialogTitle>End Referral Letter</DialogTitle>
+            </DialogHeader>
+            <div className='max-h-[60vh] overflow-auto whitespace-pre-wrap rounded-lg bg-slate-50 p-4 font-mono text-sm'>{viewingLetter}</div>
+            <div className='flex justify-end gap-2'>
+              <Button variant='secondary' onClick={() => setLetterModalOpen(false)}>
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  navigator.clipboard.writeText(viewingLetter);
+                }}
+              >
+                Copy to Clipboard
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }

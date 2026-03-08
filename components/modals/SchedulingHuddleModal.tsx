@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Info } from 'lucide-react';
 
 interface SchedulingHuddleModalProps {
   open: boolean;
@@ -85,7 +86,12 @@ export function SchedulingHuddleModal({ open, onOpenChange, currentCase, onRecor
           ) : null}
 
           <div className='space-y-2'>
-            <p className='text-sm font-semibold text-slate-700'>Emergency Contact Must Attend *</p>
+            <p className='flex items-center gap-1 text-sm font-semibold text-slate-700'>
+              Emergency Contact Must Attend *
+              <span title='If required, staff should include the emergency contact in scheduling communications and day-of logistics.'>
+                <Info className='h-3.5 w-3.5 text-slate-400' />
+              </span>
+            </p>
             <label className='flex items-center gap-2 text-sm'>
               <input
                 type='radio'

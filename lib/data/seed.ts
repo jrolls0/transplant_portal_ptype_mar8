@@ -15,7 +15,8 @@ const user = (role: UserRole) => mockUsers.find((u) => u.role === role) as User;
 const userById = (id: string) => mockUsers.find((u) => u.id === id) as User;
 
 const buildPatient = (index: number) => {
-  const [firstName, lastName, dateOfBirth] = patientNames[index];
+  const safeIndex = index % patientNames.length;
+  const [firstName, lastName, dateOfBirth] = patientNames[safeIndex];
   return {
     id: `patient-${String(index + 1).padStart(3, '0')}`,
     firstName,
@@ -83,6 +84,7 @@ const baseCase = (
     ieConfirmReviewComplete: opts.ieConfirmReviewComplete ?? true,
     contactAttempts: opts.contactAttempts ?? 0,
     lastContactAttempt: opts.lastContactAttempt,
+    educationProgress: opts.educationProgress,
     schedulingDecision: opts.schedulingDecision,
     schedulingWindows: opts.schedulingWindows,
     schedulingState: opts.schedulingState,
@@ -159,7 +161,13 @@ const mockCases: Case[] = [
     daysInStage: 9,
     flags: ['No Response x2'],
     contactAttempts: 2,
-    lastContactAttempt: iso(-1)
+    lastContactAttempt: iso(-1),
+    educationProgress: {
+      videoWatched: true,
+      videoWatchedAt: iso(-13),
+      confirmationFormComplete: false,
+      healthcareGuidanceReviewed: false
+    }
   }),
   baseCase('case-006', 'TC-2025-0205', 5, 'scheduling', {
     assignedPTC: userById('ptc-1'),
@@ -181,6 +189,14 @@ const mockCases: Case[] = [
       'Wednesday, Feb 25 — 1:00 PM - 3:00 PM',
       'Thursday, Feb 26 — 10:00 AM - 12:00 PM'
     ],
+    educationProgress: {
+      videoWatched: true,
+      videoWatchedAt: iso(-16),
+      confirmationFormComplete: true,
+      confirmationFormAt: iso(-15),
+      healthcareGuidanceReviewed: true,
+      healthcareGuidanceAt: iso(-15)
+    },
     appointmentDate: iso(8),
     appointmentConfirmed: false,
     carePartner: {
@@ -331,6 +347,208 @@ const mockCases: Case[] = [
     endedBy: 'Dr. Emily Adams',
     linkedToCaseId: 'case-018',
     flags: ['No Response x3']
+  }),
+  baseCase('case-021', 'TC-2026-0002', 20, 'initial-todos', {
+    stageEnteredAt: iso(-1),
+    slaDueDate: iso(3),
+    daysInStage: 1,
+    initialTodosComplete: {
+      inclusionExclusion: true,
+      governmentId: false,
+      insuranceCard: false
+    },
+    ieConfirmReviewComplete: false,
+    consent: {
+      roiSigned: true,
+      roiSignedAt: iso(-1),
+      smsConsent: true,
+      emailConsent: true,
+      carePartnerConsent: false
+    }
+  }),
+  baseCase('case-022', 'TC-2026-0003', 21, 'follow-through', {
+    stageEnteredAt: iso(-2),
+    slaDueDate: iso(1),
+    daysInStage: 2,
+    initialTodosComplete: {
+      inclusionExclusion: true,
+      governmentId: true,
+      insuranceCard: true
+    },
+    ieConfirmReviewComplete: false,
+    flags: ['I/E Review Pending']
+  }),
+  baseCase('case-023', 'TC-2026-0004', 22, 'education', {
+    assignedPTC: userById('ptc-1'),
+    stageEnteredAt: iso(-1),
+    slaDueDate: iso(2),
+    daysInStage: 1,
+    educationProgress: {
+      videoWatched: true,
+      videoWatchedAt: iso(-1),
+      confirmationFormComplete: true,
+      confirmationFormAt: iso(-1),
+      healthcareGuidanceReviewed: true,
+      healthcareGuidanceAt: iso(-1)
+    },
+    schedulingState: 'awaiting-huddle'
+  }),
+  baseCase('case-024', 'TC-2026-0005', 23, 'initial-screening', {
+    stageEnteredAt: iso(-2),
+    slaDueDate: iso(1),
+    daysInStage: 2,
+    initialTodosComplete: {
+      inclusionExclusion: true,
+      governmentId: true,
+      insuranceCard: true
+    },
+    ieConfirmReviewComplete: true,
+    flags: []
+  }),
+  baseCase('case-025', 'TC-2026-0006', 24, 'scheduling', {
+    assignedPTC: userById('ptc-1'),
+    stageEnteredAt: iso(-1),
+    slaDueDate: iso(2),
+    daysInStage: 1,
+    schedulingState: 'awaiting-huddle',
+    educationProgress: {
+      videoWatched: true,
+      videoWatchedAt: iso(-2),
+      confirmationFormComplete: true,
+      confirmationFormAt: iso(-2),
+      healthcareGuidanceReviewed: true,
+      healthcareGuidanceAt: iso(-2)
+    }
+  }),
+  baseCase('case-026', 'TC-2026-0007', 25, 'education', {
+    assignedPTC: userById('ptc-2'),
+    stageEnteredAt: iso(-10),
+    slaDueDate: iso(-3),
+    daysInStage: 10,
+    contactAttempts: 2,
+    lastContactAttempt: iso(-2),
+    flags: ['No Response x2'],
+    educationProgress: {
+      videoWatched: true,
+      videoWatchedAt: iso(-12),
+      confirmationFormComplete: false,
+      healthcareGuidanceReviewed: false
+    }
+  }),
+  baseCase('case-027', 'TC-2026-0008', 26, 'new-referral', {
+    stageEnteredAt: iso(-1),
+    slaDueDate: iso(2),
+    daysInStage: 1,
+    consent: {
+      roiSigned: false,
+      smsConsent: true,
+      emailConsent: false,
+      carePartnerConsent: false
+    },
+    initialTodosComplete: {
+      inclusionExclusion: false,
+      governmentId: false,
+      insuranceCard: false
+    },
+    ieConfirmReviewComplete: false
+  }),
+  baseCase('case-028', 'TC-2026-0009', 27, 'patient-onboarding', {
+    stageEnteredAt: iso(-2),
+    slaDueDate: iso(1),
+    daysInStage: 2,
+    consent: {
+      roiSigned: false,
+      smsConsent: true,
+      emailConsent: true,
+      carePartnerConsent: false
+    },
+    initialTodosComplete: {
+      inclusionExclusion: false,
+      governmentId: false,
+      insuranceCard: true
+    },
+    ieConfirmReviewComplete: false
+  }),
+  baseCase('case-029', 'TC-2026-0010', 28, 'intermediary-step', {
+    stageEnteredAt: iso(-3),
+    slaDueDate: iso(1),
+    daysInStage: 3,
+    flags: ['Missing I/E Values'],
+    ieConfirmReviewComplete: false
+  }),
+  baseCase('case-030', 'TC-2026-0011', 29, 'medical-records-review', {
+    assignedPTC: userById('ptc-1'),
+    ptcAssignedAt: iso(-7),
+    stageEnteredAt: iso(-2),
+    slaDueDate: iso(2),
+    daysInStage: 2,
+    flags: ['Partial Packet Decision']
+  }),
+  baseCase('case-031', 'TC-2026-0012', 30, 'final-decision', {
+    assignedPTC: userById('ptc-2'),
+    ptcAssignedAt: iso(-8),
+    stageEnteredAt: iso(-1),
+    slaDueDate: iso(2),
+    daysInStage: 1
+  }),
+  baseCase('case-032', 'TC-2026-0013', 31, 're-referral-review', {
+    stageEnteredAt: iso(-1),
+    slaDueDate: iso(2),
+    daysInStage: 1,
+    linkedFromCaseId: 'case-019',
+    flags: ['Re-Referral Pending']
+  }),
+  baseCase('case-033', 'TC-2026-0014', 32, 'scheduled', {
+    assignedPTC: userById('ptc-1'),
+    ptcAssignedAt: iso(-12),
+    stageEnteredAt: iso(-1),
+    slaDueDate: iso(5),
+    daysInStage: 1,
+    schedulingState: 'scheduled',
+    appointmentConfirmed: true,
+    appointmentDate: iso(4),
+    schedulingDecision: {
+      type: 'direct-evaluation',
+      carePartnerRequired: false,
+      appointmentTypes: ['Direct Evaluation'],
+      notes: 'Confirmed in Surginet.',
+      decidedBy: 'Jane Thompson',
+      decidedAt: iso(-2)
+    },
+    educationProgress: {
+      videoWatched: true,
+      videoWatchedAt: iso(-6),
+      confirmationFormComplete: true,
+      confirmationFormAt: iso(-5),
+      healthcareGuidanceReviewed: true,
+      healthcareGuidanceAt: iso(-5)
+    }
+  }),
+  baseCase('case-034', 'TC-2026-0015', 33, 'scheduled', {
+    assignedPTC: userById('ptc-2'),
+    ptcAssignedAt: iso(-14),
+    stageEnteredAt: iso(-2),
+    slaDueDate: iso(6),
+    daysInStage: 2,
+    schedulingState: 'scheduled',
+    appointmentConfirmed: true,
+    appointmentDate: iso(5),
+    schedulingDecision: {
+      type: 'testing-first',
+      carePartnerRequired: true,
+      appointmentTypes: ['Cardiac stress test', 'Direct Evaluation'],
+      notes: 'Testing-first path completed and appointment confirmed.',
+      decidedBy: 'Mark Rivera',
+      decidedAt: iso(-3)
+    },
+    educationProgress: {
+      videoWatched: true,
+      videoWatchedAt: iso(-8),
+      confirmationFormComplete: true,
+      confirmationFormAt: iso(-7),
+      healthcareGuidanceReviewed: true,
+      healthcareGuidanceAt: iso(-7)
+    }
   })
 ];
 
@@ -435,7 +653,21 @@ const mockTasks: Task[] = [
   }),
   task('task-028', 'case-007', 'Escalate hard-block to Senior', 'partial-packet-decision', 'ptc', 'pending', -2, 'urgent'),
   task('task-029', 'case-020', 'Send End Referral Letter (Patient + Clinic)', 'send-end-letter', 'front-desk', 'pending', -1, 'high'),
-  task('task-030', 'case-011', 'Contact Patient for Onboarding', 'send-message', 'front-desk', 'pending', 1, 'medium')
+  task('task-030', 'case-011', 'Contact Patient for Onboarding', 'send-message', 'front-desk', 'pending', 1, 'medium'),
+  task('task-031', 'case-021', 'Review Initial TODO Packet', 'review-document', 'front-desk', 'pending', 2, 'medium'),
+  task('task-032', 'case-022', 'Confirm I/E Review', 'confirm-ie-review', 'front-desk', 'pending', 1, 'high'),
+  task('task-033', 'case-023', 'Record Scheduling Huddle', 'scheduling-huddle', 'front-desk', 'pending', 2, 'medium'),
+  task('task-034', 'case-024', 'Review I/E Responses', 'review-ie-responses', 'front-desk', 'pending', 1, 'high'),
+  task('task-035', 'case-025', 'Record Scheduling Huddle', 'scheduling-huddle', 'front-desk', 'pending', 2, 'medium'),
+  task('task-036', 'case-026', 'Education Follow-up Outreach', 'education-follow-up', 'ptc', 'pending', -1, 'urgent'),
+  task('task-037', 'case-027', 'Contact Patient for Onboarding', 'send-message', 'front-desk', 'pending', 2, 'medium'),
+  task('task-038', 'case-028', 'Collect Missing Onboarding Docs', 'review-document', 'front-desk', 'pending', 1, 'high'),
+  task('task-039', 'case-029', 'Collect Missing I/E Values', 'collect-missing-info', 'front-desk', 'pending', 1, 'high'),
+  task('task-040', 'case-030', 'Partial Packet Decision', 'partial-packet-decision', 'senior-coordinator', 'pending', 1, 'high'),
+  task('task-041', 'case-031', 'Final Decision', 'final-decision', 'senior-coordinator', 'pending', 2, 'high'),
+  task('task-042', 'case-032', 'Re-Referral Eligibility Review', 're-referral-review', 'senior-coordinator', 'pending', 2, 'high'),
+  task('task-043', 'case-033', 'Post-Scheduling Follow-up', 'send-message', 'ptc', 'pending', 3, 'medium'),
+  task('task-044', 'case-034', 'Post-Scheduling Follow-up', 'send-message', 'ptc', 'pending', 4, 'medium')
 ];
 
 const decision = (
@@ -588,6 +820,22 @@ const mockDecisions: Decision[] = [
       letterDraft:
         'Dear Mr. Miller, we regret to inform you that your referral has been ended due to insurance coverage not accepted by the program.'
     }
+  ),
+  decision(
+    'decision-013',
+    'case-031',
+    'final-decision',
+    'Final Decision',
+    ['Approve to education', 'Not approved'],
+    'pending'
+  ),
+  decision(
+    'decision-014',
+    'case-032',
+    're-referral-eligibility',
+    'Re-Referral Review',
+    ['Eligible - restart workflow', 'Not eligible yet'],
+    'pending'
   )
 ];
 

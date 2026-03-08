@@ -140,6 +140,14 @@ export interface Case {
   ieConfirmReviewComplete: boolean;
   contactAttempts: number;
   lastContactAttempt?: string;
+  educationProgress?: {
+    videoWatched: boolean;
+    videoWatchedAt?: string;
+    confirmationFormComplete: boolean;
+    confirmationFormAt?: string;
+    healthcareGuidanceReviewed: boolean;
+    healthcareGuidanceAt?: string;
+  };
   schedulingDecision?: {
     type: 'direct-evaluation' | 'testing-first';
     carePartnerRequired: boolean;

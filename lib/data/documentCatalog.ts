@@ -7,7 +7,7 @@ export const documentCatalog: DocumentCatalogItem[] = [
     ownership: 'patient',
     isRequired: true,
     isHardBlock: false,
-    maxAgeDays: 3650
+    maxAgeDays: 365
   },
   {
     type: 'insurance-card',
@@ -15,15 +15,14 @@ export const documentCatalog: DocumentCatalogItem[] = [
     ownership: 'patient',
     isRequired: true,
     isHardBlock: false,
-    maxAgeDays: 365
+    maxAgeDays: 180
   },
   {
     type: 'inclusion-exclusion-form',
     name: 'Inclusion/Exclusion Form',
     ownership: 'patient',
     isRequired: true,
-    isHardBlock: false,
-    maxAgeDays: 180
+    isHardBlock: false
   },
   {
     type: 'medicare-2728',
@@ -43,11 +42,19 @@ export const documentCatalog: DocumentCatalogItem[] = [
   },
   {
     type: 'lab-results',
-    name: 'Lab Results (last 3 months)',
+    name: 'Lab Results (last 3 mo)',
     ownership: 'nephrologist',
     isRequired: true,
     isHardBlock: false,
     maxAgeDays: 90
+  },
+  {
+    type: 'hepatitis-panel',
+    name: 'Hepatitis Panel',
+    ownership: 'nephrologist',
+    isRequired: true,
+    isHardBlock: false,
+    maxAgeDays: 365
   },
   {
     type: 'cardiology-clearance',
@@ -58,27 +65,19 @@ export const documentCatalog: DocumentCatalogItem[] = [
     maxAgeDays: 180
   },
   {
-    type: 'hepatitis-panel',
-    name: 'Hepatitis Panel',
-    ownership: 'nephrologist',
-    isRequired: true,
-    isHardBlock: false,
-    maxAgeDays: 90
-  },
-  {
     type: 'outside-cardiology-records',
     name: 'Outside Cardiology Records',
     ownership: 'shared',
     isRequired: false,
     isHardBlock: false,
-    maxAgeDays: 365
+    maxAgeDays: 180
   },
   {
     type: 'pcp-records',
-    name: 'PCP Records (last 2 years)',
+    name: 'PCP Records',
     ownership: 'shared',
     isRequired: false,
     isHardBlock: false,
-    maxAgeDays: 730
+    maxAgeDays: 365
   }
 ];

@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { useRequireAuth } from '@/lib/context/AuthContext';
 import { useCases } from '@/lib/context/CaseContext';
@@ -25,12 +25,16 @@ import { SendMessageModal } from '@/components/modals/SendMessageModal';
 import { CreateTaskModal } from '@/components/modals/CreateTaskModal';
 import { LogExternalStepModal } from '@/components/modals/LogExternalStepModal';
 import { EndReferralModal } from '@/components/modals/EndReferralModal';
+import { CaseCockpitSkeleton } from '@/components/shared/LoadingSkeleton';
 
 export default function CaseCockpitPage() {
   const auth = useRequireAuth();
 
   const params = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab');
   const {
+    hydrated,
     cases,
     tasks,
     documents,
@@ -47,7 +51,8 @@ export default function CaseCockpitPage() {
     startReReferral,
     recordSchedulingHuddle,
     markSurginetConfirmed,
-    updateSchedulingWindows
+    updateSchedulingWindows,
+    updateEducationProgress
   } = useCases();
   const { notify } = useNotification();
 
@@ -64,6 +69,17 @@ export default function CaseCockpitPage() {
   const caseMessageList = useMemo(() => (currentCase ? caseMessages(messages, currentCase.id) : []), [messages, currentCase]);
   const caseDecisionList = useMemo(() => (currentCase ? caseDecisions(decisions, currentCase.id) : []), [decisions, currentCase]);
   const caseAuditList = useMemo(() => (currentCase ? caseAudit(currentCase.id, audit) : []), [audit, currentCase]);
+
+  useEffect(() => {
+    const validTabs: CockpitTabId[] = ['summary', 'tasks', 'documents', 'messages', 'decisions', 'scheduling', 'end-referral', 'audit'];
+    if (requestedTab && validTabs.includes(requestedTab as CockpitTabId)) {
+      setTab(requestedTab as CockpitTabId);
+    }
+  }, [requestedTab]);
+
+  if (!hydrated) {
+    return <CaseCockpitSkeleton />;
+  }
 
   if (!currentCase) {
     return (
@@ -187,12 +203,24 @@ export default function CaseCockpitPage() {
             updateSchedulingWindows(currentCase.id, windows);
             notify('Scheduling windows updated');
           }}
+          onSimulateEducationComplete={() => {
+            updateEducationProgress(currentCase.id, {
+              videoWatched: true,
+              videoWatchedAt: new Date().toISOString(),
+              confirmationFormComplete: true,
+              confirmationFormAt: new Date().toISOString(),
+              healthcareGuidanceReviewed: true,
+              healthcareGuidanceAt: new Date().toISOString()
+            });
+            notify('Education checklist marked complete');
+          }}
         />
       ) : null}
 
       {tab === 'end-referral' ? (
         <EndReferralTab
           currentCase={currentCase}
+          decisions={caseDecisionList}
           onEndReferral={({ reasonCode, rationale, letterDraft }) => {
             endReferral(currentCase.id, reasonCode, rationale, letterDraft);
             notify('Referral ended and letter task created');
@@ -234,6 +262,7 @@ export default function CaseCockpitPage() {
       <LogExternalStepModal
         open={externalOpen}
         onOpenChange={setExternalOpen}
+        currentCase={currentCase}
         onSubmit={({ title, externalSystem, notes, markAsContactAttempt }) => {
           logExternalStep({
             caseId: currentCase.id,

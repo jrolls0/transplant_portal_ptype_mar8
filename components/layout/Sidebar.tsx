@@ -33,14 +33,16 @@ export function Sidebar() {
 
       <nav className='space-y-1 p-4'>
         {navItems.map((item) => {
-          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const active = pathname.startsWith(item.href);
           return (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center justify-between rounded-lg border-l-2 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50',
-                active && 'border-l-blue-600 bg-blue-50 text-blue-700'
+                'flex items-center justify-between rounded-lg px-4 py-2.5 text-sm transition-all',
+                active
+                  ? 'border-l-4 border-blue-600 bg-blue-50 font-medium text-blue-700'
+                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
               )}
             >
               <span className='flex items-center gap-2'>
@@ -58,8 +60,10 @@ export function Sidebar() {
           <Link
             href='/admin'
             className={cn(
-              'mt-2 flex items-center gap-2 rounded-lg border-l-2 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50',
-              pathname.startsWith('/admin') && 'border-l-blue-600 bg-blue-50 text-blue-700'
+              'mt-2 flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm transition-all',
+              pathname.startsWith('/admin')
+                ? 'border-l-4 border-blue-600 bg-blue-50 font-medium text-blue-700'
+                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
             )}
           >
             <ShieldCheck className='h-4 w-4' />

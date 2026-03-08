@@ -7,8 +7,8 @@ import { AppShell } from '@/components/layout/AppShell';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Patient Portal',
-  description: 'Kidney transplant referral workflow portal prototype.'
+  title: 'TransplantFlow - ChristianaCare',
+  description: 'Kidney Transplant Referral Management Portal'
 };
 
 export const dynamic = 'force-dynamic';

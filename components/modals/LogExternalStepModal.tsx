@@ -6,14 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Case } from '@/types';
 
 interface LogExternalStepModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  currentCase?: Case;
   onSubmit: (payload: { title: string; externalSystem: string; notes: string; markAsContactAttempt: boolean }) => void;
 }
 
-export function LogExternalStepModal({ open, onOpenChange, onSubmit }: LogExternalStepModalProps) {
+export function LogExternalStepModal({ open, onOpenChange, currentCase, onSubmit }: LogExternalStepModalProps) {
   const [actionType, setActionType] = useState('');
   const [externalSystem, setExternalSystem] = useState('');
   const [notes, setNotes] = useState('');
@@ -63,8 +65,24 @@ export function LogExternalStepModal({ open, onOpenChange, onSubmit }: LogExtern
 
           <label className='flex items-center gap-2 text-sm'>
             <Checkbox checked={contactAttempt} onChange={(event) => setContactAttempt(event.target.checked)} />
-            This is a contact attempt
+            <span>
+              Mark as contact attempt
+              {currentCase && contactAttempt ? (
+                <span className='ml-2 font-medium text-amber-600'>(This will be attempt #{currentCase.contactAttempts + 1})</span>
+              ) : null}
+            </span>
           </label>
+
+          {currentCase && currentCase.contactAttempts >= 2 && contactAttempt ? (
+            <div className='mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3'>
+              <p className='text-sm text-amber-800'>
+                <strong>Warning:</strong> This will be attempt #{currentCase.contactAttempts + 1}.
+                {currentCase.contactAttempts + 1 >= 3
+                  ? ' This will trigger an automatic decision escalation to Senior Coordinator.'
+                  : ''}
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <DialogFooter>

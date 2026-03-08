@@ -47,10 +47,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 }
 
 function toneClasses(tone: ToastTone) {
-  if (tone === 'success') return 'border-emerald-200 bg-emerald-50 text-emerald-800';
-  if (tone === 'warning') return 'border-amber-200 bg-amber-50 text-amber-800';
-  if (tone === 'error') return 'border-red-200 bg-red-50 text-red-800';
-  return 'border-blue-200 bg-blue-50 text-blue-800';
+  if (tone === 'success') return 'border-emerald-300 bg-gradient-to-r from-emerald-50 to-emerald-100 text-emerald-900';
+  if (tone === 'warning') return 'border-amber-300 bg-gradient-to-r from-amber-50 to-amber-100 text-amber-900';
+  if (tone === 'error') return 'border-red-300 bg-gradient-to-r from-red-50 to-red-100 text-red-900';
+  return 'border-blue-300 bg-gradient-to-r from-blue-50 to-blue-100 text-blue-900';
 }
 
 function ToneIcon({ tone }: { tone: ToastTone }) {
@@ -65,9 +65,9 @@ function Toaster() {
   if (!context) return null;
 
   return (
-    <div className='fixed right-4 top-4 z-[60] flex w-[350px] flex-col gap-2'>
+    <div className='fixed right-4 top-4 z-[60] flex w-[360px] flex-col gap-2'>
       {context.toasts.map((toast) => (
-        <div key={toast.id} className={`flex items-start gap-3 rounded-lg border p-3 shadow-sm ${toneClasses(toast.tone)}`}>
+        <div key={toast.id} className={`flex items-start gap-3 rounded-lg border p-3 shadow-lg ${toneClasses(toast.tone)}`}>
           <ToneIcon tone={toast.tone} />
           <p className='flex-1 text-sm font-medium'>{toast.title}</p>
           <Button variant='ghost' size='icon' className='h-6 w-6 text-current' onClick={() => context.dismiss(toast.id)}>

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { CheckCircle, Clock } from 'lucide-react';
 import { Case } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,9 +18,16 @@ interface SchedulingTabProps {
   }) => void;
   onMarkSurginet: (notes: string) => void;
   onUpdateWindows: (windows: string[]) => void;
+  onSimulateEducationComplete?: () => void;
 }
 
-export function SchedulingTab({ currentCase, onRecordHuddle, onMarkSurginet, onUpdateWindows }: SchedulingTabProps) {
+export function SchedulingTab({
+  currentCase,
+  onRecordHuddle,
+  onMarkSurginet,
+  onUpdateWindows,
+  onSimulateEducationComplete
+}: SchedulingTabProps) {
   const [huddleOpen, setHuddleOpen] = useState(false);
   const [externalOpen, setExternalOpen] = useState(false);
   const [windowsDraft, setWindowsDraft] = useState(currentCase.schedulingWindows?.join('\n') ?? '');
@@ -64,12 +72,57 @@ export function SchedulingTab({ currentCase, onRecordHuddle, onMarkSurginet, onU
       {effectiveState === 'pre-scheduling' ? (
         <section className='rounded-xl border border-slate-200 bg-white p-4'>
           <h3 className='mb-2 text-sm font-semibold text-slate-900'>Scheduling</h3>
-          <p className='text-sm text-slate-700'>Education must be completed before scheduling can begin.</p>
-          <ul className='mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600'>
-            <li>Video watched: Not started</li>
-            <li>Confirmation form: Not started</li>
-            <li>Healthcare guidance: Not started</li>
-          </ul>
+          <p className='mb-3 text-sm text-slate-700'>Education must be completed before scheduling can begin.</p>
+
+          <div className='space-y-2'>
+            <div
+              className={`flex items-center gap-2 rounded-lg p-2 ${
+                currentCase.educationProgress?.videoWatched ? 'bg-emerald-50' : 'bg-slate-50'
+              }`}
+            >
+              {currentCase.educationProgress?.videoWatched ? (
+                <CheckCircle className='h-5 w-5 text-emerald-600' />
+              ) : (
+                <Clock className='h-5 w-5 text-slate-400' />
+              )}
+              <span className='text-sm'>Watch Transplant Education Video (~80 min)</span>
+            </div>
+
+            <div
+              className={`flex items-center gap-2 rounded-lg p-2 ${
+                currentCase.educationProgress?.confirmationFormComplete ? 'bg-emerald-50' : 'bg-slate-50'
+              }`}
+            >
+              {currentCase.educationProgress?.confirmationFormComplete ? (
+                <CheckCircle className='h-5 w-5 text-emerald-600' />
+              ) : (
+                <Clock className='h-5 w-5 text-slate-400' />
+              )}
+              <span className='text-sm'>Complete Education Confirmation Form</span>
+            </div>
+
+            <div
+              className={`flex items-center gap-2 rounded-lg p-2 ${
+                currentCase.educationProgress?.healthcareGuidanceReviewed ? 'bg-emerald-50' : 'bg-slate-50'
+              }`}
+            >
+              {currentCase.educationProgress?.healthcareGuidanceReviewed ? (
+                <CheckCircle className='h-5 w-5 text-emerald-600' />
+              ) : (
+                <Clock className='h-5 w-5 text-slate-400' />
+              )}
+              <span className='text-sm'>Review Age-Appropriate Healthcare Guidance</span>
+            </div>
+          </div>
+
+          {onSimulateEducationComplete ? (
+            <div className='mt-4 border-t border-slate-200 pt-4'>
+              <p className='mb-2 text-xs text-slate-500'>Demo: Simulate patient completing education</p>
+              <Button size='sm' variant='outline' onClick={onSimulateEducationComplete}>
+                Mark All Education Complete
+              </Button>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -145,6 +198,7 @@ export function SchedulingTab({ currentCase, onRecordHuddle, onMarkSurginet, onU
       <LogExternalStepModal
         open={externalOpen}
         onOpenChange={setExternalOpen}
+        currentCase={currentCase}
         onSubmit={({ notes }) => {
           onMarkSurginet(notes);
         }}

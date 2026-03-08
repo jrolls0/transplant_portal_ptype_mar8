@@ -80,3 +80,14 @@ body {
 .page-gradient {
   background: linear-gradient(180deg, rgba(219, 234, 254, 0.2) 0%, rgba(248, 250, 252, 0) 24%, rgba(248, 250, 252, 1) 100%);
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    font-size: 12pt;
+    background: #fff !important;
+  }
+}

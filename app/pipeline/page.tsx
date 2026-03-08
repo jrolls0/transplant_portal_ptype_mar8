@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineTable, SortKey } from '@/components/pipeline/PipelineTable';
 import { PipelineSummary } from '@/components/pipeline/PipelineSummary';
+import { DashboardSkeleton } from '@/components/shared/LoadingSkeleton';
 
 const PAGE_SIZE = 20;
 
@@ -17,7 +18,7 @@ export default function PipelinePage() {
   useRequireAuth();
 
   const router = useRouter();
-  const { cases } = useCases();
+  const { hydrated, cases } = useCases();
   const { notify } = useNotification();
 
   const [filters, setFilters] = useState({ stage: 'all', ptc: 'all', sla: 'all', clinic: 'all', dateRange: 'all' });
@@ -65,6 +66,10 @@ export default function PipelinePage() {
   const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
   const paged = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  if (!hydrated) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div className='space-y-4'>
