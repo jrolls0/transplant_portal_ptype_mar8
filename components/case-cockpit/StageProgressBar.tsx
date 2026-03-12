@@ -1,22 +1,7 @@
 import { AlertCircle, CheckCircle } from 'lucide-react';
+import { stages } from '@/lib/data/stages';
 import { getVisibleProgressIndex } from '@/lib/utils/stageTransitions';
 import { Case } from '@/types';
-
-const stages = [
-  { key: 'new-referral', label: 'Referral', short: '1' },
-  { key: 'patient-onboarding', label: 'Onboarding', short: '2' },
-  { key: 'initial-todos', label: 'Patient TODOs', short: '3' },
-  { key: 'follow-through', label: 'Follow-through', short: '4' },
-  { key: 'intermediary-step', label: 'Missing Info', short: '5' },
-  { key: 'initial-screening', label: 'Screening', short: '6' },
-  { key: 'financial-screening', label: 'Financial', short: '7' },
-  { key: 'records-collection', label: 'Records', short: '8' },
-  { key: 'medical-records-review', label: 'Med Review', short: '9' },
-  { key: 'specialist-review', label: 'Specialists', short: '10' },
-  { key: 'final-decision', label: 'Decision', short: '11' },
-  { key: 'education', label: 'Education', short: '12' },
-  { key: 'scheduling', label: 'Scheduling', short: '13' }
-] as const;
 
 export function StageProgressBar({ currentCase }: { currentCase: Case }) {
   const currentIndex = getVisibleProgressIndex(currentCase.stage);
@@ -82,7 +67,7 @@ export function StageProgressBar({ currentCase }: { currentCase: Case }) {
           const isFuture = index > currentIndex;
 
           return (
-            <div key={stage.key} className={`flex min-w-[60px] flex-col items-center ${isFuture ? 'opacity-40' : ''}`}>
+            <div key={stage.id} className={`flex min-w-[72px] flex-col items-center ${isFuture ? 'opacity-40' : ''}`}>
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                   isCompleted ? 'bg-blue-600 text-white' : ''
@@ -90,11 +75,14 @@ export function StageProgressBar({ currentCase }: { currentCase: Case }) {
                   isFuture ? 'bg-slate-100 text-slate-400' : ''
                 }`}
               >
-                {isCompleted ? <CheckCircle className='h-4 w-4' /> : stage.short}
+                {isCompleted ? <CheckCircle className='h-4 w-4' /> : index + 1}
               </div>
               <span className={`mt-1 whitespace-nowrap text-center text-xs ${isCurrent ? 'font-semibold text-blue-700' : 'text-slate-500'}`}>
-                {stage.label}
+                {stage.name}
               </span>
+              {stage.id === 'staff-review' && currentCase.hasMissingInfo ? (
+                <span className='mt-1 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-700'>Missing Info</span>
+              ) : null}
             </div>
           );
         })}

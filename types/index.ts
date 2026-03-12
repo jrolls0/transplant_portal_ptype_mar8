@@ -11,15 +11,14 @@ export type UserRole =
 
 export type CaseStage =
   | 'new-referral'
-  | 'patient-onboarding'
-  | 'initial-todos'
-  | 'follow-through'
-  | 'intermediary-step'
-  | 'initial-screening'
-  | 'financial-screening'
-  | 'records-collection'
-  | 'medical-records-review'
-  | 'specialist-review'
+  | 'onboarding'
+  | 'patient-forms'
+  | 'staff-review'
+  | 'initial-screen'
+  | 'financial'
+  | 'records-req'
+  | 'records-review'
+  | 'specialists'
   | 'final-decision'
   | 'education'
   | 'scheduling'
@@ -38,8 +37,8 @@ export type TaskType =
   | 'collect-missing-info'
   | 'send-message'
   | 'log-external-step'
-  | 'financial-screening'
-  | 'specialist-review'
+  | 'financial'
+  | 'specialists'
   | 'request-records'
   | 'partial-packet-decision'
   | 'final-decision'
@@ -156,6 +155,7 @@ export interface Case {
   };
   ieFormResponses?: IEFormResponses;
   ieConfirmReviewComplete: boolean;
+  hasMissingInfo?: boolean;
   contactAttempts: number;
   lastContactAttempt?: string;
   educationProgress?: {

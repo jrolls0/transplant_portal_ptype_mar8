@@ -21,7 +21,7 @@ export default function FinancialDashboardPage() {
   const [messageCase, setMessageCase] = useState<Case | null>(null);
   const [endCase, setEndCase] = useState<Case | null>(null);
 
-  const pendingCases = useMemo(() => cases.filter((currentCase) => currentCase.stage === 'financial-screening'), [cases]);
+  const pendingCases = useMemo(() => cases.filter((currentCase) => currentCase.stage === 'financial'), [cases]);
   const clarificationCases = pendingCases.filter((currentCase) => currentCase.flags.includes('Needs Clarification'));
 
   const financialTasksByCase = useMemo(
@@ -33,6 +33,16 @@ export default function FinancialDashboardPage() {
           return acc;
         }, {}),
     [tasks]
+  );
+
+  const orderedPendingCases = useMemo(
+    () =>
+      [...pendingCases].sort((left, right) => {
+        const rightCreatedAt = financialTasksByCase[right.id]?.createdAt ?? right.updatedAt;
+        const leftCreatedAt = financialTasksByCase[left.id]?.createdAt ?? left.updatedAt;
+        return new Date(rightCreatedAt).getTime() - new Date(leftCreatedAt).getTime();
+      }),
+    [financialTasksByCase, pendingCases]
   );
 
   if (!hydrated) {
@@ -73,7 +83,7 @@ export default function FinancialDashboardPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {pendingCases.map((currentCase) => (
+            {orderedPendingCases.map((currentCase) => (
               <TableRow key={currentCase.id}>
                 <TableCell>
                   {currentCase.patient.lastName}, {currentCase.patient.firstName}
@@ -90,7 +100,7 @@ export default function FinancialDashboardPage() {
                     <Button
                       size='sm'
                       onClick={() => {
-                        setCaseStage(currentCase.id, 'records-collection');
+                        setCaseStage(currentCase.id, 'records-req');
                         removeCaseFlag(currentCase.id, 'Needs Clarification');
                         const task = financialTasksByCase[currentCase.id];
                         if (task) completeTask(task.id, 'Financially cleared.');
@@ -116,7 +126,7 @@ export default function FinancialDashboardPage() {
       <section className='rounded-xl border border-slate-200 bg-white p-4'>
         <h2 className='mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500'>Needs Clarification</h2>
         <div className='space-y-2'>
-          {clarificationCases.map((currentCase) => (
+          {orderedPendingCases.filter((currentCase) => currentCase.flags.includes('Needs Clarification')).map((currentCase) => (
             <div key={currentCase.id} className='flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 p-3'>
               <div>
                 <p className='text-sm font-semibold text-slate-900'>

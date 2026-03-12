@@ -15,6 +15,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { Case, Decision, Document } from '@/types';
+import { caseStageDisplay } from '@/lib/utils/stageTransitions';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -76,7 +77,7 @@ export function DecisionPanel({ decision, currentCase, documents, onSubmit }: De
             <div className='flex items-center gap-1 text-slate-600'>
               <Clock className='h-4 w-4' />
               <span>
-                Stage: <strong>{currentCase.stage.replace(/-/g, ' ')}</strong>
+                Stage: <strong>{caseStageDisplay(currentCase)}</strong>
               </span>
             </div>
             <div className='flex items-center gap-1 text-slate-600'>

@@ -2,6 +2,7 @@
 
 import { ArrowUpDown } from 'lucide-react';
 import { Case } from '@/types';
+import { caseStageDisplay } from '@/lib/utils/stageTransitions';
 import { SLAIndicator } from '@/components/shared/SLAIndicator';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -55,7 +56,7 @@ export function PipelineTable({ cases, sortKey, sortDirection, onSortChange, onO
               <TableCell className='font-medium'>
                 {currentCase.patient.lastName}, {currentCase.patient.firstName}
               </TableCell>
-              <TableCell>{currentCase.stage}</TableCell>
+              <TableCell>{caseStageDisplay(currentCase)}</TableCell>
               <TableCell>{currentCase.assignedPTC?.name ?? '—'}</TableCell>
               <TableCell>{currentCase.daysInStage}</TableCell>
               <TableCell>

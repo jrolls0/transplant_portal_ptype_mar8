@@ -19,7 +19,7 @@ const queueTabs = [
   { id: 'all', label: 'All' },
   { id: 'intake', label: 'Intake/TODOs' },
   { id: 'ie-review', label: 'I/E Review' },
-  { id: 'initial-screening', label: 'Route Screening' },
+  { id: 'initial-screen', label: 'Route Screening' },
   { id: 'doc-review', label: 'Doc Review' },
   { id: 'missing-info', label: 'Missing Info' },
   { id: 'scheduling', label: 'Scheduling' },
@@ -46,9 +46,30 @@ export default function FrontDeskDashboardPage() {
     [tasks]
   );
 
-  const overdue = frontDeskPending.filter((task) => task.slaStatus === 'overdue');
-  const dueToday = frontDeskPending.filter((task) => task.slaStatus === 'at-risk');
-  const upcoming = frontDeskPending.filter((task) => task.slaStatus === 'on-track');
+  const routeScreeningCases = useMemo(
+    () =>
+      [...cases]
+        .filter(
+          (currentCase) =>
+            currentCase.stage === 'initial-screen' &&
+            currentCase.ieConfirmReviewComplete &&
+            !currentCase.flags.includes('Pending Senior Review')
+        )
+        .sort((left, right) => {
+          const rightDate = new Date(right.updatedAt ?? right.stageEnteredAt).getTime();
+          const leftDate = new Date(left.updatedAt ?? left.stageEnteredAt).getTime();
+          return rightDate - leftDate;
+        }),
+    [cases]
+  );
+
+  const frontDeskQueueCases = useMemo(() => {
+    const pendingTaskCaseIds = new Set(frontDeskPending.map((task) => task.caseId));
+    return [
+      ...routeScreeningCases,
+      ...cases.filter((currentCase) => pendingTaskCaseIds.has(currentCase.id) && !routeScreeningCases.some((routeCase) => routeCase.id === currentCase.id))
+    ];
+  }, [cases, frontDeskPending, routeScreeningCases]);
 
   const taskByCase = useMemo(
     () =>
@@ -59,13 +80,25 @@ export default function FrontDeskDashboardPage() {
     [frontDeskPending]
   );
 
+  const queueStatusByCaseId = useMemo(
+    () =>
+      frontDeskQueueCases.reduce<Record<string, string>>((acc, currentCase) => {
+        acc[currentCase.id] = taskByCase[currentCase.id]?.slaStatus ?? currentCase.slaStatus;
+        return acc;
+      }, {}),
+    [frontDeskQueueCases, taskByCase]
+  );
+
+  const overdue = frontDeskQueueCases.filter((currentCase) => queueStatusByCaseId[currentCase.id] === 'overdue');
+  const dueToday = frontDeskQueueCases.filter((currentCase) => queueStatusByCaseId[currentCase.id] === 'at-risk');
+  const upcoming = frontDeskQueueCases.filter((currentCase) => queueStatusByCaseId[currentCase.id] === 'on-track');
+
   const filteredCases = useMemo(() => {
-    const relevantIds = new Set(frontDeskPending.map((task) => task.caseId));
-    const candidates = cases.filter((currentCase) => relevantIds.has(currentCase.id));
+    const candidates = frontDeskQueueCases;
 
     if (activeTab === 'all') return candidates;
     if (activeTab === 'intake') {
-      return candidates.filter((currentCase) => ['initial-todos', 'follow-through'].includes(currentCase.stage));
+      return candidates.filter((currentCase) => ['patient-forms', 'staff-review'].includes(currentCase.stage));
     }
     if (activeTab === 'doc-review') {
       const caseIds = new Set(
@@ -76,7 +109,7 @@ export default function FrontDeskDashboardPage() {
       return candidates.filter((currentCase) => caseIds.has(currentCase.id));
     }
     if (activeTab === 'missing-info') {
-      return candidates.filter((currentCase) => currentCase.stage === 'intermediary-step');
+      return candidates.filter((currentCase) => currentCase.stage === 'staff-review' && currentCase.hasMissingInfo);
     }
     if (activeTab === 'scheduling') {
       return candidates.filter((currentCase) =>
@@ -89,13 +122,11 @@ export default function FrontDeskDashboardPage() {
         ['review-ie-responses', 'confirm-ie-review'].includes(taskByCase[currentCase.id]?.type ?? '')
       );
     }
-    if (activeTab === 'initial-screening') {
-      return cases.filter(
-        (currentCase) => currentCase.stage === 'initial-screening' && currentCase.ieConfirmReviewComplete
-      );
+    if (activeTab === 'initial-screen') {
+      return routeScreeningCases;
     }
     return candidates.filter((currentCase) => taskByCase[currentCase.id]?.type === 'send-end-letter');
-  }, [activeTab, cases, frontDeskPending, taskByCase, documents]);
+  }, [activeTab, frontDeskQueueCases, routeScreeningCases, taskByCase, documents]);
 
   const actionsByCaseId = useMemo(() => {
     const actionMap: Record<string, React.ReactNode> = {};
@@ -103,7 +134,11 @@ export default function FrontDeskDashboardPage() {
     filteredCases.forEach((currentCase) => {
       const task = taskByCase[currentCase.id];
 
-      if (currentCase.stage === 'initial-screening' && currentCase.ieConfirmReviewComplete) {
+      if (
+        currentCase.stage === 'initial-screen' &&
+        currentCase.ieConfirmReviewComplete &&
+        !currentCase.flags.includes('Pending Senior Review')
+      ) {
         actionMap[currentCase.id] = (
           <Button
             size='sm'
@@ -125,6 +160,8 @@ export default function FrontDeskDashboardPage() {
       }
 
       if (task.type === 'confirm-ie-review') return;
+
+      if (task.type === 'collect-missing-info') return;
 
       if (task.type === 'confirm-surginet') {
         actionMap[currentCase.id] = (
@@ -193,6 +230,10 @@ export default function FrontDeskDashboardPage() {
       if (task?.type === 'confirm-ie-review') {
         hrefMap[currentCase.id] = `/cases/${currentCase.id}?tab=ie-responses`;
       }
+
+      if (task?.type === 'collect-missing-info') {
+        hrefMap[currentCase.id] = `/cases/${currentCase.id}?tab=ie-responses`;
+      }
     });
 
     return hrefMap;
@@ -209,10 +250,30 @@ export default function FrontDeskDashboardPage() {
       if (taskByCase[currentCase.id]?.type === 'confirm-ie-review') {
         labelMap[currentCase.id] = 'Review Responses';
       }
+
+      if (taskByCase[currentCase.id]?.type === 'collect-missing-info') {
+        labelMap[currentCase.id] = 'Review Responses';
+      }
     });
 
     return labelMap;
   }, [filteredCases, taskByCase]);
+
+  const taskTitleByCaseId = useMemo(() => {
+    const titleMap: Record<string, string> = {};
+
+    filteredCases.forEach((currentCase) => {
+      if (
+        currentCase.stage === 'initial-screen' &&
+        currentCase.ieConfirmReviewComplete &&
+        !currentCase.flags.includes('Pending Senior Review')
+      ) {
+        titleMap[currentCase.id] = 'Route Case';
+      }
+    });
+
+    return titleMap;
+  }, [filteredCases]);
 
   const selectedExternalTask = selectedTaskId ? tasks.find((task) => task.id === selectedTaskId) : undefined;
   const selectedExternalCase = selectedExternalTask ? cases.find((currentCase) => currentCase.id === selectedExternalTask.caseId) : undefined;
@@ -250,11 +311,10 @@ export default function FrontDeskDashboardPage() {
             <h2 className='mb-2 text-sm font-semibold uppercase tracking-wide text-red-600'>Overdue</h2>
             <CaseQueue
               cases={filteredCases.filter((currentCase) =>
-                activeTab === 'initial-screening'
-                  ? currentCase.slaStatus === 'overdue'
-                  : taskByCase[currentCase.id]?.slaStatus === 'overdue'
+                queueStatusByCaseId[currentCase.id] === 'overdue'
               )}
               taskByCaseId={taskByCase}
+              taskTitleByCaseId={taskTitleByCaseId}
               actionsByCaseId={actionsByCaseId}
               openCaseHrefByCaseId={openCaseHrefByCaseId}
               openCaseLabelByCaseId={openCaseLabelByCaseId}
@@ -265,11 +325,10 @@ export default function FrontDeskDashboardPage() {
             <h2 className='mb-2 text-sm font-semibold uppercase tracking-wide text-amber-600'>Due Today / At Risk</h2>
             <CaseQueue
               cases={filteredCases.filter((currentCase) =>
-                activeTab === 'initial-screening'
-                  ? currentCase.slaStatus === 'at-risk'
-                  : taskByCase[currentCase.id]?.slaStatus === 'at-risk'
+                queueStatusByCaseId[currentCase.id] === 'at-risk'
               )}
               taskByCaseId={taskByCase}
+              taskTitleByCaseId={taskTitleByCaseId}
               actionsByCaseId={actionsByCaseId}
               openCaseHrefByCaseId={openCaseHrefByCaseId}
               openCaseLabelByCaseId={openCaseLabelByCaseId}
@@ -280,11 +339,10 @@ export default function FrontDeskDashboardPage() {
             <h2 className='mb-2 text-sm font-semibold uppercase tracking-wide text-emerald-600'>On Track</h2>
             <CaseQueue
               cases={filteredCases.filter((currentCase) =>
-                activeTab === 'initial-screening'
-                  ? currentCase.slaStatus === 'on-track'
-                  : taskByCase[currentCase.id]?.slaStatus === 'on-track'
+                queueStatusByCaseId[currentCase.id] === 'on-track'
               )}
               taskByCaseId={taskByCase}
+              taskTitleByCaseId={taskTitleByCaseId}
               actionsByCaseId={actionsByCaseId}
               openCaseHrefByCaseId={openCaseHrefByCaseId}
               openCaseLabelByCaseId={openCaseLabelByCaseId}

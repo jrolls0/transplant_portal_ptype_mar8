@@ -13,7 +13,7 @@ const iso = (daysOffset: number, hourOffset = 0) => {
 
 type IEProfile = 'clean' | 'minor-flags' | 'major-flags';
 
-const hasSubmittedIEForm = (stage: Case['stage']) => !['new-referral', 'patient-onboarding', 'initial-todos'].includes(stage);
+const hasSubmittedIEForm = (stage: Case['stage']) => !['new-referral', 'onboarding', 'patient-forms'].includes(stage);
 
 const generateIEResponses = (patientIndex: number, profile: IEProfile): IEFormResponses => {
   const completedAt = iso(-6 - patientIndex);
@@ -120,7 +120,7 @@ const baseCase = (
   return {
     id,
     caseNumber,
-    patient: buildPatient(patientIndex),
+    patient: opts.patient ?? buildPatient(patientIndex),
     clinicContacts: clinicContacts(patientIndex % clinics.length),
     referringClinic: clinics[patientIndex % clinics.length],
     stage,
@@ -146,6 +146,7 @@ const baseCase = (
     },
     ieFormResponses: opts.ieFormResponses,
     ieConfirmReviewComplete: opts.ieConfirmReviewComplete ?? true,
+    hasMissingInfo: opts.hasMissingInfo ?? false,
     contactAttempts: opts.contactAttempts ?? 0,
     lastContactAttempt: opts.lastContactAttempt,
     educationProgress: opts.educationProgress,
@@ -166,7 +167,31 @@ const baseCase = (
 };
 
 const seededCases: Case[] = [
-  baseCase('case-001', 'TC-2024-0142', 0, 'specialist-review', {
+  baseCase('case-035', 'TC-2026-0016', 34, 'initial-screen', {
+    patient: {
+      id: 'patient-035',
+      firstName: 'John',
+      lastName: 'Stamos',
+      dateOfBirth: '1964-08-19',
+      email: 'john.stamos@mail.com',
+      phone: '(302) 555-1274',
+      preferredLanguage: 'English',
+      mrn: 'MRN-8035'
+    },
+    stageEnteredAt: iso(0),
+    slaDueDate: iso(-1),
+    daysInStage: 1,
+    createdAt: iso(-6),
+    updatedAt: iso(0, 1),
+    initialTodosComplete: {
+      inclusionExclusion: true,
+      governmentId: true,
+      insuranceCard: true
+    },
+    ieConfirmReviewComplete: true,
+    flags: ['BMI > 42', 'Recreational Drug Use', 'Uses Supplemental Oxygen']
+  }),
+  baseCase('case-001', 'TC-2024-0142', 0, 'specialists', {
     assignedPTC: userById('ptc-1'),
     ptcAssignedAt: iso(-22),
     carePartner: {
@@ -189,7 +214,7 @@ const seededCases: Case[] = [
     flags: [],
     schedulingState: 'pre-scheduling'
   }),
-  baseCase('case-002', 'TC-2025-0201', 1, 'follow-through', {
+  baseCase('case-002', 'TC-2025-0201', 1, 'staff-review', {
     assignedPTC: userById('ptc-1'),
     ptcAssignedAt: iso(-9),
     stageEnteredAt: iso(-5),
@@ -203,7 +228,7 @@ const seededCases: Case[] = [
     },
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-003', 'TC-2025-0202', 2, 'financial-screening', {
+  baseCase('case-003', 'TC-2025-0202', 2, 'financial', {
     assignedPTC: userById('ptc-2'),
     ptcAssignedAt: iso(-6),
     stageEnteredAt: iso(-2),
@@ -211,7 +236,7 @@ const seededCases: Case[] = [
     daysInStage: 2,
     flags: []
   }),
-  baseCase('case-004', 'TC-2025-0203', 3, 'financial-screening', {
+  baseCase('case-004', 'TC-2025-0203', 3, 'financial', {
     stageEnteredAt: iso(-4),
     slaDueDate: iso(-1),
     daysInStage: 4,
@@ -271,7 +296,7 @@ const seededCases: Case[] = [
       consentedToViewStatus: true
     }
   }),
-  baseCase('case-007', 'TC-2025-0206', 6, 'records-collection', {
+  baseCase('case-007', 'TC-2025-0206', 6, 'records-req', {
     assignedPTC: userById('ptc-2'),
     ptcAssignedAt: iso(-18),
     stageEnteredAt: iso(-12),
@@ -279,7 +304,7 @@ const seededCases: Case[] = [
     daysInStage: 12,
     flags: ['2728 Missing', 'Packet Stalled']
   }),
-  baseCase('case-008', 'TC-2025-0207', 7, 'records-collection', {
+  baseCase('case-008', 'TC-2025-0207', 7, 'records-req', {
     assignedPTC: userById('ptc-1'),
     ptcAssignedAt: iso(-16),
     stageEnteredAt: iso(-7),
@@ -287,21 +312,21 @@ const seededCases: Case[] = [
     daysInStage: 7,
     flags: ['Packet Stalled']
   }),
-  baseCase('case-009', 'TC-2025-0208', 8, 'initial-screening', {
+  baseCase('case-009', 'TC-2025-0208', 8, 'initial-screen', {
     stageEnteredAt: iso(-3),
     slaDueDate: iso(-2),
     daysInStage: 3,
     flags: ['BMI > 42', 'Active substance use'],
     ieConfirmReviewComplete: true
   }),
-  baseCase('case-010', 'TC-2025-0209', 9, 'initial-screening', {
+  baseCase('case-010', 'TC-2025-0209', 9, 'initial-screen', {
     stageEnteredAt: iso(-1),
     slaDueDate: iso(1),
     daysInStage: 1,
     flags: ['Assign PTC'],
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-012', 'TC-2025-0211', 11, 'patient-onboarding', {
+  baseCase('case-012', 'TC-2025-0211', 11, 'onboarding', {
     stageEnteredAt: iso(-2),
     slaDueDate: iso(2),
     daysInStage: 2,
@@ -318,7 +343,7 @@ const seededCases: Case[] = [
     },
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-013', 'TC-2025-0212', 12, 'initial-todos', {
+  baseCase('case-013', 'TC-2025-0212', 12, 'patient-forms', {
     stageEnteredAt: iso(-2),
     slaDueDate: iso(2),
     daysInStage: 2,
@@ -329,10 +354,11 @@ const seededCases: Case[] = [
     },
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-014', 'TC-2025-0213', 13, 'intermediary-step', {
+  baseCase('case-014', 'TC-2025-0213', 13, 'staff-review', {
     stageEnteredAt: iso(-4),
     slaDueDate: iso(-1),
     daysInStage: 4,
+    hasMissingInfo: true,
     flags: ['Missing I/E Values'],
     initialTodosComplete: {
       inclusionExclusion: false,
@@ -341,7 +367,7 @@ const seededCases: Case[] = [
     },
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-015', 'TC-2025-0214', 14, 'medical-records-review', {
+  baseCase('case-015', 'TC-2025-0214', 14, 'records-review', {
     assignedPTC: userById('ptc-2'),
     ptcAssignedAt: iso(-14),
     stageEnteredAt: iso(-3),
@@ -349,7 +375,7 @@ const seededCases: Case[] = [
     daysInStage: 3,
     flags: ['Partial Packet Decision']
   }),
-  baseCase('case-016', 'TC-2025-0215', 15, 'specialist-review', {
+  baseCase('case-016', 'TC-2025-0215', 15, 'specialists', {
     assignedPTC: userById('ptc-1'),
     ptcAssignedAt: iso(-11),
     stageEnteredAt: iso(-6),
@@ -395,7 +421,7 @@ const seededCases: Case[] = [
     linkedToCaseId: 'case-018',
     flags: ['No Response x3']
   }),
-  baseCase('case-021', 'TC-2026-0002', 20, 'initial-todos', {
+  baseCase('case-021', 'TC-2026-0002', 20, 'patient-forms', {
     stageEnteredAt: iso(-1),
     slaDueDate: iso(3),
     daysInStage: 1,
@@ -413,7 +439,7 @@ const seededCases: Case[] = [
       carePartnerConsent: false
     }
   }),
-  baseCase('case-022', 'TC-2026-0003', 21, 'follow-through', {
+  baseCase('case-022', 'TC-2026-0003', 21, 'staff-review', {
     stageEnteredAt: iso(-2),
     slaDueDate: iso(1),
     daysInStage: 2,
@@ -440,7 +466,7 @@ const seededCases: Case[] = [
     },
     schedulingState: 'awaiting-huddle'
   }),
-  baseCase('case-024', 'TC-2026-0005', 23, 'initial-screening', {
+  baseCase('case-024', 'TC-2026-0005', 23, 'initial-screen', {
     stageEnteredAt: iso(-2),
     slaDueDate: iso(1),
     daysInStage: 2,
@@ -499,7 +525,7 @@ const seededCases: Case[] = [
     },
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-028', 'TC-2026-0009', 27, 'patient-onboarding', {
+  baseCase('case-028', 'TC-2026-0009', 27, 'onboarding', {
     stageEnteredAt: iso(-2),
     slaDueDate: iso(1),
     daysInStage: 2,
@@ -516,14 +542,15 @@ const seededCases: Case[] = [
     },
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-029', 'TC-2026-0010', 28, 'intermediary-step', {
+  baseCase('case-029', 'TC-2026-0010', 28, 'staff-review', {
     stageEnteredAt: iso(-3),
     slaDueDate: iso(1),
     daysInStage: 3,
+    hasMissingInfo: true,
     flags: ['Missing I/E Values'],
     ieConfirmReviewComplete: false
   }),
-  baseCase('case-030', 'TC-2026-0011', 29, 'medical-records-review', {
+  baseCase('case-030', 'TC-2026-0011', 29, 'records-review', {
     assignedPTC: userById('ptc-1'),
     ptcAssignedAt: iso(-7),
     stageEnteredAt: iso(-2),
@@ -616,6 +643,22 @@ const ieProfilesByCaseId: Partial<Record<string, IEProfile>> = {
 };
 
 const ieResponseOverridesByCaseId: Partial<Record<string, IEFormResponses>> = {
+  'case-035': {
+    onDialysis: 'yes',
+    eGFR: 11,
+    heightFeet: 5,
+    heightInches: 6,
+    weightLbs: 270,
+    usCitizenOrResident: 'yes',
+    needsOtherOrganTransplant: 'no',
+    usesSupplementalOxygen: 'yes',
+    heartSurgeryLast6Months: 'no',
+    receivingCancerTreatment: 'no',
+    recreationalDrugUse: 'yes',
+    hasNonHealingWounds: 'no',
+    additionalHealthInfo: 'Patient reported active oxygen use and drug-use history during I/E submission.',
+    completedAt: iso(-2)
+  },
   'case-009': {
     onDialysis: 'yes',
     eGFR: 12,
@@ -688,33 +731,33 @@ const mockTasks: Task[] = [
   task('task-008', 'case-007', 'Request Medicare 2728', 'request-records', 'ptc', 'pending', -3, 'urgent'),
   task('task-009', 'case-008', 'Retrieve Missing Clinic Packet', 'request-records', 'ptc', 'in-progress', -1, 'high'),
   task('task-010', 'case-005', 'Education Follow-up Outreach', 'education-follow-up', 'ptc', 'pending', -2, 'urgent'),
-  task('task-011', 'case-003', 'Financial Screening Review', 'financial-screening', 'financial', 'pending', 1, 'high'),
-  task('task-012', 'case-004', 'Financial Clarification Needed', 'financial-screening', 'financial', 'pending', -1, 'high'),
-  task('task-013', 'case-001', 'Nephrology Review', 'specialist-review', 'nephrology', 'pending', 1, 'high', {
+  task('task-011', 'case-003', 'Financial Screening Review', 'financial', 'financial', 'pending', 1, 'high'),
+  task('task-012', 'case-004', 'Financial Clarification Needed', 'financial', 'financial', 'pending', -1, 'high'),
+  task('task-013', 'case-001', 'Nephrology Review', 'specialists', 'nephrology', 'pending', 1, 'high', {
     assignedToUser: userById('neph-1')
   }),
-  task('task-014', 'case-001', 'Dietitian Review', 'specialist-review', 'dietitian', 'completed', -1, 'high', {
+  task('task-014', 'case-001', 'Dietitian Review', 'specialists', 'dietitian', 'completed', -1, 'high', {
     assignedToUser: userById('diet-1'),
     completedAt: iso(-1, 2),
     completedBy: userById('diet-1'),
     completionNotes: 'Cleared - no nutrition concerns.'
   }),
-  task('task-015', 'case-001', 'Social Work Review', 'specialist-review', 'social-work', 'completed', -1, 'high', {
+  task('task-015', 'case-001', 'Social Work Review', 'specialists', 'social-work', 'completed', -1, 'high', {
     assignedToUser: userById('sw-1'),
     completedAt: iso(-1, 4),
     completedBy: userById('sw-1'),
     completionNotes: 'Cleared with family support confirmed.'
   }),
-  task('task-016', 'case-016', 'Dietitian Review', 'specialist-review', 'dietitian', 'pending', -2, 'high', {
+  task('task-016', 'case-016', 'Dietitian Review', 'specialists', 'dietitian', 'pending', -2, 'high', {
     assignedToUser: userById('diet-1')
   }),
-  task('task-017', 'case-016', 'Social Work Review', 'specialist-review', 'social-work', 'completed', -2, 'high', {
+  task('task-017', 'case-016', 'Social Work Review', 'specialists', 'social-work', 'completed', -2, 'high', {
     assignedToUser: userById('sw-1'),
     completedAt: iso(-2, 3),
     completedBy: userById('sw-1'),
     completionNotes: 'Concern raised related to transportation instability.'
   }),
-  task('task-018', 'case-016', 'Nephrology Review', 'specialist-review', 'nephrology', 'completed', -2, 'high', {
+  task('task-018', 'case-016', 'Nephrology Review', 'specialists', 'nephrology', 'completed', -2, 'high', {
     assignedToUser: userById('neph-1'),
     completedAt: iso(-2, 2),
     completedBy: userById('neph-1'),
@@ -930,9 +973,9 @@ const mockDecisions: Decision[] = [
 ];
 
 const clinicPacketStages: Case['stage'][] = [
-  'records-collection',
-  'medical-records-review',
-  'specialist-review',
+  'records-req',
+  'records-review',
+  'specialists',
   'final-decision',
   'education',
   'scheduling',
@@ -1027,9 +1070,9 @@ const generateDocumentsForCase = (currentCase: Case, patientIndex: number): Docu
   }
 
   const roiStatus: Document['status'] = currentCase.consent.roiSigned
-    ? currentCase.stage === 'patient-onboarding'
+    ? currentCase.stage === 'onboarding'
       ? 'needs-review'
-      : currentCase.stage === 'initial-todos'
+      : currentCase.stage === 'patient-forms'
         ? 'needs-review'
         : 'validated'
     : 'required';
@@ -1037,30 +1080,30 @@ const generateDocumentsForCase = (currentCase: Case, patientIndex: number): Docu
   addDocument('ROI - ChristianaCare', 'roi-christiana', 'patient', roiStatus, 'patient');
   addDocument('ROI - Dialysis Records', 'roi-dialysis', 'patient', roiStatus, 'patient');
 
-  if (currentCase.stage === 'patient-onboarding') {
+  if (currentCase.stage === 'onboarding') {
     return docs;
   }
 
   const govFrontStatus: Document['status'] =
-    currentCase.stage === 'initial-todos'
+    currentCase.stage === 'patient-forms'
       ? currentCase.initialTodosComplete.governmentId
         ? 'needs-review'
         : 'needs-review'
       : 'validated';
   const govBackStatus: Document['status'] =
-    currentCase.stage === 'initial-todos'
+    currentCase.stage === 'patient-forms'
       ? currentCase.initialTodosComplete.governmentId
         ? 'needs-review'
         : 'required'
       : 'validated';
   const insuranceFrontStatus: Document['status'] =
-    currentCase.stage === 'initial-todos'
+    currentCase.stage === 'patient-forms'
       ? currentCase.initialTodosComplete.insuranceCard
         ? 'needs-review'
         : 'needs-review'
       : 'validated';
   const insuranceBackStatus: Document['status'] =
-    currentCase.stage === 'initial-todos'
+    currentCase.stage === 'patient-forms'
       ? currentCase.initialTodosComplete.insuranceCard
         ? 'needs-review'
         : 'required'
@@ -1084,7 +1127,7 @@ const generateDocumentsForCase = (currentCase: Case, patientIndex: number): Docu
   );
 
   if (isClinicPacketStage) {
-    const defaultPacketStatus: Document['status'] = currentCase.stage === 'records-collection' ? 'needs-review' : 'validated';
+    const defaultPacketStatus: Document['status'] = currentCase.stage === 'records-req' ? 'needs-review' : 'validated';
     const overrides = clinicPacketOverrides[currentCase.id] ?? {};
 
     addDocument(
@@ -1265,7 +1308,7 @@ const mockAudit: AuditEvent[] = [
   audit('audit-020', 'case-027', 'NEW_REFERRAL', 'New referral received from clinic portal.', userById('fd-1'), -1)
 ];
 
-const removedCaseIds = new Set(['case-013', 'case-021', 'case-023']);
+const removedCaseIds = new Set(['case-004', 'case-008', 'case-009', 'case-013', 'case-021', 'case-023', 'case-024', 'case-028', 'case-029']);
 
 const seedData: SeedData = {
   cases: mockCases.filter((currentCase) => !removedCaseIds.has(currentCase.id)),

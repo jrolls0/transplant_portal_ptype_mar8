@@ -4,6 +4,7 @@ import { CaseQueueItem } from '@/components/dashboard/CaseQueueItem';
 interface CaseQueueProps {
   cases: Case[];
   taskByCaseId?: Record<string, Task | undefined>;
+  taskTitleByCaseId?: Record<string, string | undefined>;
   actionsByCaseId?: Record<string, React.ReactNode>;
   openCaseHrefByCaseId?: Record<string, string | undefined>;
   openCaseLabelByCaseId?: Record<string, string | undefined>;
@@ -12,6 +13,7 @@ interface CaseQueueProps {
 export function CaseQueue({
   cases,
   taskByCaseId = {},
+  taskTitleByCaseId = {},
   actionsByCaseId = {},
   openCaseHrefByCaseId = {},
   openCaseLabelByCaseId = {}
@@ -27,6 +29,7 @@ export function CaseQueue({
           key={currentCase.id}
           currentCase={currentCase}
           task={taskByCaseId[currentCase.id]}
+          taskTitle={taskTitleByCaseId[currentCase.id]}
           actions={actionsByCaseId[currentCase.id]}
           openCaseHref={openCaseHrefByCaseId[currentCase.id]}
           openCaseLabel={openCaseLabelByCaseId[currentCase.id]}

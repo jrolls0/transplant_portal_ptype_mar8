@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { AlertTriangle, Calendar, CheckCircle, Clock, TrendingUp, Users } from 'lucide-react';
 import { Case } from '@/types';
+import { stageDisplay } from '@/lib/utils/stageTransitions';
 
 interface PipelineSummaryProps {
   cases: Case[];
@@ -104,7 +105,7 @@ export function PipelineSummary({ cases }: PipelineSummaryProps) {
         <div className='flex flex-wrap gap-2'>
           {stats.topStages.map(([stage, count]) => (
             <span key={stage} className='inline-flex items-center rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-700'>
-              {stage.replace(/-/g, ' ')}: <strong className='ml-1'>{count}</strong>
+              {stageDisplay(stage as Case['stage'])}: <strong className='ml-1'>{count}</strong>
             </span>
           ))}
         </div>

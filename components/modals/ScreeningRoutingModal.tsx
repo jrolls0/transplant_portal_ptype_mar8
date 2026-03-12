@@ -61,6 +61,25 @@ export function ScreeningRoutingModal({ open, onOpenChange, currentCase, onRoute
             <p className='text-sm text-slate-600'>Clinic: {currentCase.referringClinic}</p>
           </div>
 
+          {flagsExcludingAssignPTC.length > 0 ? (
+            <div className='rounded-lg border border-amber-200 bg-amber-50 p-3'>
+              <p className='mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800'>
+                <AlertTriangle className='h-4 w-4' />
+                Flagged Screening Findings
+              </p>
+              <div className='flex flex-wrap gap-2'>
+                {flagsExcludingAssignPTC.map((flag) => (
+                  <span
+                    key={flag}
+                    className='inline-flex items-center rounded-full bg-white px-2.5 py-1 text-xs font-medium text-amber-800 ring-1 ring-amber-200'
+                  >
+                    {flag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div
             className={`flex items-center gap-2 rounded-lg border p-3 ${
               currentCase.ieConfirmReviewComplete ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200 bg-amber-50'
@@ -78,20 +97,6 @@ export function ScreeningRoutingModal({ open, onOpenChange, currentCase, onRoute
               </>
             )}
           </div>
-
-          {flagsExcludingAssignPTC.length > 0 ? (
-            <div className='rounded-lg border border-amber-200 bg-amber-50 p-3'>
-              <p className='mb-1 flex items-center gap-2 text-sm font-semibold text-amber-800'>
-                <AlertTriangle className='h-4 w-4' />
-                System Flags Detected
-              </p>
-              <ul className='list-disc pl-5 text-sm text-amber-700'>
-                {flagsExcludingAssignPTC.map((flag) => (
-                  <li key={flag}>{flag}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
 
           <div className='space-y-2'>
             <Label className='text-sm font-semibold'>Select Routing Destination</Label>

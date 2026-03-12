@@ -1,148 +1,108 @@
-import { StageDefinition } from '@/types';
+import { CaseStage, StageDefinition } from '@/types';
 
-export const stageDefinitions: StageDefinition[] = [
+export const stages: StageDefinition[] = [
   {
     id: 'new-referral',
     name: 'New Referral',
-    shortName: 'Ref',
+    shortName: 'New Referral',
     order: 1,
     slaDays: 1,
-    description: 'Referral received and awaiting intake review.'
+    description: 'Dialysis clinic submits referral, system creates case'
   },
   {
-    id: 'patient-onboarding',
-    name: 'Patient Onboarding',
-    shortName: 'ROI',
+    id: 'onboarding',
+    name: 'Onboarding',
+    shortName: 'Onboarding',
     order: 2,
     slaDays: 3,
-    description: 'Consent and communication preferences are collected.'
+    description: 'Patient registers and signs ROI forms'
   },
   {
-    id: 'initial-todos',
-    name: 'Initial TODOs',
-    shortName: 'TODO',
+    id: 'patient-forms',
+    name: 'Patient Forms',
+    shortName: 'Patient Forms',
     order: 3,
-    slaDays: 4,
-    description: 'Patient completes I/E, ID, and insurance items.'
+    slaDays: 7,
+    description: 'Patient completes I/E form, uploads ID and insurance'
   },
   {
-    id: 'follow-through',
-    name: 'Follow Through',
-    shortName: 'Follow',
+    id: 'staff-review',
+    name: 'Staff Review',
+    shortName: 'Staff Review',
     order: 4,
     slaDays: 3,
-    description: 'Front desk reviews I/E responses and closes gaps.'
+    description: 'Front Desk validates documents and reviews I/E responses'
   },
   {
-    id: 'intermediary-step',
-    name: 'Intermediary Step',
-    shortName: 'Interm',
+    id: 'initial-screen',
+    name: 'Initial Screen',
+    shortName: 'Initial Screen',
     order: 5,
-    slaDays: 3,
-    description: 'Missing inclusion/exclusion values are collected.'
+    slaDays: 2,
+    description: 'Front Desk routes case to Financial or Senior Coordinator'
   },
   {
-    id: 'initial-screening',
-    name: 'Initial Screening',
-    shortName: 'Screen',
+    id: 'financial',
+    name: 'Financial',
+    shortName: 'Financial',
     order: 6,
     slaDays: 3,
-    description: 'Routing decision to financial or senior queue.'
+    description: 'Financial Coordinator reviews insurance'
   },
   {
-    id: 'financial-screening',
-    name: 'Financial Screening',
-    shortName: 'Fin',
+    id: 'records-req',
+    name: 'Records Req',
+    shortName: 'Records Req',
     order: 7,
-    slaDays: 3,
-    description: 'Coverage is verified and cleared or ended.'
+    slaDays: 14,
+    description: 'Dialysis clinic uploads required packet documents'
   },
   {
-    id: 'records-collection',
-    name: 'Records Collection',
-    shortName: 'Rec',
+    id: 'records-review',
+    name: 'Records Review',
+    shortName: 'Records Review',
     order: 8,
-    slaDays: 7,
-    description: 'Clinic packet and hard-block records are collected.'
-  },
-  {
-    id: 'medical-records-review',
-    name: 'Medical Records Review',
-    shortName: 'Med',
-    order: 9,
-    slaDays: 4,
-    description: 'Senior reviews packet completeness and clinical readiness.'
-  },
-  {
-    id: 'specialist-review',
-    name: 'Specialist Review',
-    shortName: 'Spec',
-    order: 10,
     slaDays: 5,
-    description: 'Dietitian, social work, nephrology complete parallel reviews.'
+    description: 'Senior Coordinator reviews all medical records'
+  },
+  {
+    id: 'specialists',
+    name: 'Specialists',
+    shortName: 'Specialists',
+    order: 9,
+    slaDays: 10,
+    description: 'Dietitian, Social Work, and Nephrology reviews'
   },
   {
     id: 'final-decision',
     name: 'Final Decision',
-    shortName: 'Dec',
-    order: 11,
-    slaDays: 2,
-    description: 'Senior coordinator issues transplant pathway decision.'
+    shortName: 'Final Decision',
+    order: 10,
+    slaDays: 3,
+    description: 'Senior Coordinator makes final approval decision'
   },
   {
     id: 'education',
     name: 'Education',
-    shortName: 'Edu',
-    order: 12,
-    slaDays: 5,
-    description: 'Patient education deliverables are completed.'
+    shortName: 'Education',
+    order: 11,
+    slaDays: 14,
+    description: 'Patient completes education video and forms'
   },
   {
     id: 'scheduling',
     name: 'Scheduling',
-    shortName: 'Sched',
-    order: 13,
-    slaDays: 5,
-    description: 'Huddle, windows, and Surginet confirmation are completed.'
-  },
-  {
-    id: 'scheduled',
-    name: 'Scheduled',
-    shortName: 'Done',
-    order: 14,
-    slaDays: 999,
-    description: 'Appointment is confirmed and active.'
-  },
-  {
-    id: 'ended',
-    name: 'Ended',
-    shortName: 'End',
-    order: 15,
-    slaDays: 1,
-    description: 'Referral is closed with approved rationale and letter.'
-  },
-  {
-    id: 're-referral-review',
-    name: 'Re-Referral Review',
-    shortName: 'ReRef',
-    order: 16,
-    slaDays: 3,
-    description: 'Senior reviews eligibility for re-entry from ended case.'
+    shortName: 'Scheduling',
+    order: 12,
+    slaDays: 7,
+    description: 'Schedule evaluation appointment'
   }
 ];
 
-export const orderedProgressStages = [
-  'new-referral',
-  'patient-onboarding',
-  'initial-todos',
-  'follow-through',
-  'intermediary-step',
-  'initial-screening',
-  'financial-screening',
-  'records-collection',
-  'medical-records-review',
-  'specialist-review',
-  'final-decision',
-  'education',
-  'scheduling'
-] as const;
+export const stageDefinitions = stages;
+
+export const orderedProgressStages = stages.map((stage) => stage.id) as readonly CaseStage[];
+
+export const getStageById = (id: string) => stages.find((stage) => stage.id === id);
+
+export const getStageOrder = (id: string) => getStageById(id)?.order ?? 0;

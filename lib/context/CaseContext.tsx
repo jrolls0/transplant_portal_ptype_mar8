@@ -9,7 +9,7 @@ import { maybeAdvanceCaseStage } from '@/lib/utils/stageTransitions';
 import { Case, Decision, Message, SeedData, Task, UserRole } from '@/types';
 import { useAuth } from '@/lib/context/AuthContext';
 
-const STORAGE_KEY = 'transplant-demo-state-v6';
+const STORAGE_KEY = 'transplant-demo-state-v10';
 
 interface CreateTaskInput {
   caseId: string;
@@ -271,6 +271,13 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
+      if (targetTask.type === 'collect-missing-info') {
+        currentCase.hasMissingInfo = false;
+        currentCase.updatedAt = nowIso();
+        currentCase.flags = currentCase.flags.filter((flag) => flag !== 'Missing I/E Values');
+        withAudit(next, currentCase.id, 'MISSING_INFO_RESOLVED', 'Missing information follow-up completed.');
+      }
+
       if (targetTask.type === 'confirm-surginet') {
         currentCase.stage = 'scheduled';
         currentCase.schedulingState = 'scheduled';
@@ -285,8 +292,8 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
         currentCase.schedulingState = 'in-progress';
       }
 
-      if (targetTask.type === 'specialist-review') {
-        const specialistTasks = next.tasks.filter((task) => task.caseId === currentCase.id && task.type === 'specialist-review');
+      if (targetTask.type === 'specialists') {
+        const specialistTasks = next.tasks.filter((task) => task.caseId === currentCase.id && task.type === 'specialists');
         const completedSpecialistTasks = specialistTasks.filter((task) => task.status === 'completed');
         const allCompleted = specialistTasks.length >= 3 && completedSpecialistTasks.length === specialistTasks.length;
 
@@ -511,9 +518,20 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
       const next = structuredClone(current);
       const currentCase = next.cases.find((item) => item.id === caseId);
       if (!currentCase) return current;
+      const existingRouteTask = next.tasks.find(
+        (task) =>
+          task.caseId === caseId &&
+          task.assignedToRole === 'front-desk' &&
+          task.status !== 'completed' &&
+          (task.title === 'Route Case' || task.type === 'review-ie-responses')
+      );
+
+      if (existingRouteTask) {
+        next.tasks = next.tasks.filter((task) => task.id !== existingRouteTask.id);
+      }
 
       if (destination === 'financial') {
-        currentCase.stage = 'financial-screening';
+        currentCase.stage = 'financial';
         currentCase.stageEnteredAt = nowIso();
         currentCase.updatedAt = nowIso();
         currentCase.flags = currentCase.flags.filter((flag) => flag !== 'Pending Senior Review');
@@ -521,7 +539,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
         next.tasks.unshift({
           id: buildId('task'),
           caseId,
-          type: 'financial-screening',
+          type: 'financial',
           title: 'Financial Screening Review',
           description: notes || 'Review insurance and verify coverage.',
           assignedToRole: 'financial',
@@ -701,7 +719,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
     const lower = selectedOption.toLowerCase();
 
     if (targetDecision.type === 'screening-override') {
-      if (lower.includes('proceed') || lower.includes('override')) currentCase.stage = 'financial-screening';
+      if (lower.includes('proceed') || lower.includes('override')) currentCase.stage = 'financial';
       if (lower.includes('end')) {
         currentCase.stage = 'ended';
         currentCase.endReason = 'OTHER';
@@ -711,7 +729,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (targetDecision.type === 'hard-block-override' || targetDecision.type === 'partial-packet') {
-      if (lower.includes('proceed')) currentCase.stage = 'medical-records-review';
+      if (lower.includes('proceed')) currentCase.stage = 'records-review';
       if (lower.includes('end')) {
         currentCase.stage = 'ended';
         currentCase.endReason = 'ADM-INCOMPLETE';
@@ -752,7 +770,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (targetDecision.type === 're-referral-eligibility' && (lower.includes('eligible') || lower.includes('proceed'))) {
-      currentCase.stage = 'patient-onboarding';
+      currentCase.stage = 'onboarding';
       currentCase.flags = currentCase.flags.filter((flag) => flag !== 'Re-Referral Pending');
     }
 
@@ -923,6 +941,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
           insuranceCard: false
         },
         ieConfirmReviewComplete: false,
+        hasMissingInfo: false,
         contactAttempts: 0,
         lastContactAttempt: undefined,
         schedulingDecision: undefined,

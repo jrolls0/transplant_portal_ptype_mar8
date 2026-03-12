@@ -35,7 +35,13 @@ export default function SeniorDashboardPage() {
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
 
-  const pendingDecisions = useMemo(() => decisions.filter((decision) => decision.status === 'pending'), [decisions]);
+  const pendingDecisions = useMemo(
+    () =>
+      [...decisions]
+        .filter((decision) => decision.status === 'pending')
+        .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime()),
+    [decisions]
+  );
 
   const tabCounts = useMemo(
     () =>

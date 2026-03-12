@@ -6,6 +6,7 @@ import { Download } from 'lucide-react';
 import { useRequireAuth } from '@/lib/context/AuthContext';
 import { useCases } from '@/lib/context/CaseContext';
 import { useNotification } from '@/lib/context/NotificationContext';
+import { getStageOrder } from '@/lib/data/stages';
 import { Button } from '@/components/ui/button';
 import { PipelineFilters } from '@/components/pipeline/PipelineFilters';
 import { PipelineTable, SortKey } from '@/components/pipeline/PipelineTable';
@@ -49,7 +50,7 @@ export default function PipelinePage() {
         return direction * a.patient.lastName.localeCompare(b.patient.lastName);
       }
       if (sortKey === 'stage') {
-        return direction * a.stage.localeCompare(b.stage);
+        return direction * (getStageOrder(a.stage) - getStageOrder(b.stage));
       }
       if (sortKey === 'ptc') {
         return direction * (a.assignedPTC?.name ?? '').localeCompare(b.assignedPTC?.name ?? '');

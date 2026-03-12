@@ -1,6 +1,7 @@
 'use client';
 
 import { Case, SLAStatus } from '@/types';
+import { getStageOrder, stageDisplay } from '@/lib/utils/stageTransitions';
 import { Select } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 
@@ -19,7 +20,15 @@ interface PipelineFiltersProps {
 }
 
 export function PipelineFilters({ filters, onChange, cases }: PipelineFiltersProps) {
-  const uniqueStages = Array.from(new Set(cases.map((currentCase) => currentCase.stage))).sort();
+  const uniqueStages = Array.from(new Set(cases.map((currentCase) => currentCase.stage))).sort((left, right) => {
+    const leftOrder = getStageOrder(left as Case['stage']);
+    const rightOrder = getStageOrder(right as Case['stage']);
+
+    if (leftOrder && rightOrder) return leftOrder - rightOrder;
+    if (leftOrder) return -1;
+    if (rightOrder) return 1;
+    return left.localeCompare(right);
+  });
   const uniquePTC = Array.from(new Set(cases.map((currentCase) => currentCase.assignedPTC?.name).filter(Boolean) as string[])).sort();
   const uniqueClinics = Array.from(new Set(cases.map((currentCase) => currentCase.referringClinic))).sort();
 
@@ -29,7 +38,7 @@ export function PipelineFilters({ filters, onChange, cases }: PipelineFiltersPro
         <option value='all'>Stage</option>
         {uniqueStages.map((stage) => (
           <option key={stage} value={stage}>
-            {stage}
+            {stageDisplay(stage as Case['stage'])}
           </option>
         ))}
       </Select>

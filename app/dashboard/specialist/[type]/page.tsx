@@ -31,7 +31,7 @@ export default function SpecialistDashboardPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const reviewTasks = useMemo(
-    () => tasks.filter((task) => task.assignedToRole === specialist.role && task.type === 'specialist-review' && task.status !== 'completed'),
+    () => tasks.filter((task) => task.assignedToRole === specialist.role && task.type === 'specialists' && task.status !== 'completed'),
     [tasks, specialist.role]
   );
 

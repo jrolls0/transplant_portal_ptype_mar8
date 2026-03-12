@@ -52,7 +52,7 @@ export function CreateTaskModal({ open, onOpenChange, onCreate }: CreateTaskModa
                 <option value='send-message'>Send Message</option>
                 <option value='review-document'>Review Document</option>
                 <option value='request-records'>Request Records</option>
-                <option value='specialist-review'>Specialist Review</option>
+                <option value='specialists'>Specialist Review</option>
                 <option value='log-external-step'>Log External Step</option>
                 <option value='education-follow-up'>Education Follow-up</option>
               </Select>

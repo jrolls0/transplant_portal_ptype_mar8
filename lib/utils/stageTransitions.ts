@@ -2,16 +2,15 @@ import { orderedProgressStages, stageDefinitions } from '@/lib/data/stages';
 import { Case, CaseStage, Document, Task } from '@/types';
 
 const nextMap: Partial<Record<CaseStage, CaseStage>> = {
-  'new-referral': 'patient-onboarding',
-  'patient-onboarding': 'initial-todos',
-  'initial-todos': 'follow-through',
-  'follow-through': 'intermediary-step',
-  'intermediary-step': 'initial-screening',
-  'initial-screening': 'financial-screening',
-  'financial-screening': 'records-collection',
-  'records-collection': 'medical-records-review',
-  'medical-records-review': 'specialist-review',
-  'specialist-review': 'final-decision',
+  'new-referral': 'onboarding',
+  onboarding: 'patient-forms',
+  'patient-forms': 'staff-review',
+  'staff-review': 'initial-screen',
+  'initial-screen': 'financial',
+  financial: 'records-req',
+  'records-req': 'records-review',
+  'records-review': 'specialists',
+  specialists: 'final-decision',
   'final-decision': 'education',
   education: 'scheduling',
   scheduling: 'scheduled'
@@ -22,14 +21,13 @@ export function getNextStage(stage: CaseStage): CaseStage | undefined {
 }
 
 export function getStageOrder(stage: CaseStage) {
-  return stageDefinitions.find((s) => s.id === stage)?.order ?? 0;
+  return stageDefinitions.find((item) => item.id === stage)?.order ?? 0;
 }
 
 export function getVisibleProgressIndex(stage: CaseStage) {
-  const index = orderedProgressStages.indexOf(stage as (typeof orderedProgressStages)[number]);
+  const index = orderedProgressStages.indexOf(stage);
   if (index >= 0) return index;
-  if (stage === 'scheduled') return orderedProgressStages.length - 1;
-  if (stage === 'ended') return orderedProgressStages.length - 1;
+  if (stage === 'scheduled' || stage === 'ended') return orderedProgressStages.length - 1;
   return 0;
 }
 
@@ -70,13 +68,16 @@ export function maybeAdvanceCaseStage(
   caseTasks: Task[],
   caseDocuments?: Document[]
 ): CaseStage | undefined {
-  // Initial screening requires explicit routing decision by Front Desk.
-  if (currentCase.stage === 'initial-screening') return undefined;
+  if (currentCase.stage === 'initial-screen') return undefined;
 
   const pendingBlocking = caseTasks.some((task) => task.status !== 'completed' && task.priority !== 'low');
   if (pendingBlocking) return undefined;
 
-  if (currentCase.stage === 'records-collection' && caseDocuments) {
+  if (currentCase.stage === 'staff-review' && currentCase.hasMissingInfo) {
+    return undefined;
+  }
+
+  if (currentCase.stage === 'records-req' && caseDocuments) {
     const { cleared } = checkHardBlocksCleared(currentCase.id, caseDocuments);
     if (!cleared) return undefined;
   }
@@ -85,5 +86,16 @@ export function maybeAdvanceCaseStage(
 }
 
 export function stageDisplay(stage: CaseStage) {
-  return stageDefinitions.find((s) => s.id === stage)?.name ?? stage;
+  if (stage === 'scheduled') return 'Scheduled';
+  if (stage === 'ended') return 'Ended';
+  if (stage === 're-referral-review') return 'Re-Referral Review';
+  return stageDefinitions.find((item) => item.id === stage)?.name ?? stage;
+}
+
+export function caseStageDisplay(currentCase: Case) {
+  if (currentCase.stage === 'staff-review' && currentCase.hasMissingInfo) {
+    return 'Staff Review (Missing Info)';
+  }
+
+  return stageDisplay(currentCase.stage);
 }

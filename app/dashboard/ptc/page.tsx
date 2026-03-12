@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { useRequireAuth } from '@/lib/context/AuthContext';
 import { useCases } from '@/lib/context/CaseContext';
 import { useNotification } from '@/lib/context/NotificationContext';
+import { caseStageDisplay } from '@/lib/utils/stageTransitions';
 import { MiniPipeline } from '@/components/dashboard/MiniPipeline';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,16 +24,16 @@ export default function PTCDashboardPage() {
 
   const atRisk = myCases.filter((currentCase) => currentCase.slaStatus !== 'on-track');
   const stalled = myCases.filter((currentCase) => currentCase.flags.some((flag) => flag.toLowerCase().includes('stalled')));
-  const awaitingReviews = myCases.filter((currentCase) => ['specialist-review', 'medical-records-review', 'final-decision'].includes(currentCase.stage));
+  const awaitingReviews = myCases.filter((currentCase) => ['specialists', 'records-review', 'final-decision'].includes(currentCase.stage));
 
-  const unassigned = useMemo(() => cases.filter((currentCase) => !currentCase.assignedPTC && currentCase.stage === 'initial-screening'), [cases]);
+  const unassigned = useMemo(() => cases.filter((currentCase) => !currentCase.assignedPTC && currentCase.stage === 'initial-screen'), [cases]);
 
   const pipelineData = useMemo(() => {
     const stageGroups = {
-      Screening: ['initial-screening'],
-      Financial: ['financial-screening'],
-      Records: ['records-collection', 'medical-records-review'],
-      Review: ['specialist-review'],
+      Screening: ['initial-screen'],
+      Financial: ['financial'],
+      Records: ['records-req', 'records-review'],
+      Review: ['specialists'],
       Decision: ['final-decision'],
       Education: ['education'],
       Sched: ['scheduling', 'scheduled']
@@ -99,7 +100,7 @@ export default function PTCDashboardPage() {
                 <TableCell>
                   {currentCase.patient.lastName}, {currentCase.patient.firstName}
                 </TableCell>
-                <TableCell>{currentCase.stage}</TableCell>
+                <TableCell>{caseStageDisplay(currentCase)}</TableCell>
                 <TableCell>{currentCase.daysInStage}</TableCell>
                 <TableCell>
                   <SLAIndicator status={currentCase.slaStatus} />
@@ -141,7 +142,7 @@ export default function PTCDashboardPage() {
                   {currentCase.patient.lastName}, {currentCase.patient.firstName}
                 </p>
                 <p className='text-xs text-slate-500'>
-                  {currentCase.stage} • {currentCase.daysInStage}d in queue
+                  {caseStageDisplay(currentCase)} • {currentCase.daysInStage}d in queue
                 </p>
               </div>
               <Button

@@ -32,16 +32,16 @@ export default function InboxPage() {
         return currentCase.assignedPTC?.id === currentUser.id;
       }
       if (currentRole === 'financial') {
-        return currentCase.stage === 'financial-screening' || currentCase.flags.includes('Needs Clarification');
+        return currentCase.stage === 'financial' || currentCase.flags.includes('Needs Clarification');
       }
       if (currentRole === 'front-desk') {
-        return ['new-referral', 'patient-onboarding', 'initial-todos', 'follow-through', 'intermediary-step', 'initial-screening', 'scheduling', 'ended'].includes(
+        return ['new-referral', 'onboarding', 'patient-forms', 'staff-review', 'initial-screen', 'scheduling', 'ended'].includes(
           currentCase.stage
         );
       }
       if (specialistRoles.has(currentRole)) {
         return tasks.some(
-          (task) => task.caseId === currentCase.id && task.assignedToRole === currentRole && task.type === 'specialist-review'
+          (task) => task.caseId === currentCase.id && task.assignedToRole === currentRole && task.type === 'specialists'
         );
       }
 

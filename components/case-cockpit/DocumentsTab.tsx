@@ -46,7 +46,7 @@ export function DocumentsTab({ currentCase, documents, focusKey, onValidateDocum
   const hardBlockDocs = documents.filter((document) => document.isHardBlock);
   const hardBlocksMissing = hardBlockDocs.filter((document) => document.status !== 'validated');
   const hardBlocksCleared = hardBlocksMissing.length === 0;
-  const isRecordsStage = currentCase.stage === 'records-collection';
+  const isRecordsStage = currentCase.stage === 'records-req';
 
   useEffect(() => {
     if (!focusKey) return;
