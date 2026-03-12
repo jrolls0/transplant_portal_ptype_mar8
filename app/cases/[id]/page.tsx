@@ -14,6 +14,7 @@ import { CaseHeader } from '@/components/case-cockpit/CaseHeader';
 import { StageProgressBar } from '@/components/case-cockpit/StageProgressBar';
 import { CockpitTabId, TabNavigation } from '@/components/case-cockpit/TabNavigation';
 import { SummaryTab } from '@/components/case-cockpit/SummaryTab';
+import { IEResponsesTab } from '@/components/case-cockpit/IEResponsesTab';
 import { TasksTab } from '@/components/case-cockpit/TasksTab';
 import { DocumentsTab } from '@/components/case-cockpit/DocumentsTab';
 import { MessagesTab } from '@/components/case-cockpit/MessagesTab';
@@ -33,6 +34,7 @@ export default function CaseCockpitPage() {
   const params = useParams<{ id: string }>();
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get('tab');
+  const requestedFocus = searchParams.get('focus');
   const {
     hydrated,
     cases,
@@ -71,7 +73,7 @@ export default function CaseCockpitPage() {
   const caseAuditList = useMemo(() => (currentCase ? caseAudit(currentCase.id, audit) : []), [audit, currentCase]);
 
   useEffect(() => {
-    const validTabs: CockpitTabId[] = ['summary', 'tasks', 'documents', 'messages', 'decisions', 'scheduling', 'end-referral', 'audit'];
+    const validTabs: CockpitTabId[] = ['summary', 'ie-responses', 'tasks', 'documents', 'messages', 'decisions', 'scheduling', 'end-referral', 'audit'];
     if (requestedTab && validTabs.includes(requestedTab as CockpitTabId)) {
       setTab(requestedTab as CockpitTabId);
     }
@@ -130,6 +132,22 @@ export default function CaseCockpitPage() {
         />
       ) : null}
 
+      {tab === 'ie-responses' ? (
+        <IEResponsesTab
+          currentCase={currentCase}
+          onConfirmReview={
+            auth.currentRole === 'front-desk' && !currentCase.ieConfirmReviewComplete
+              ? () => {
+                  const reviewTask = caseTaskList.find((task) => task.type === 'confirm-ie-review' && task.status !== 'completed');
+                  if (!reviewTask) return;
+                  completeTask(reviewTask.id, 'I/E review confirmed by front desk.');
+                  notify('I/E review confirmed');
+                }
+              : undefined
+          }
+        />
+      ) : null}
+
       {tab === 'tasks' ? (
         <TasksTab
           currentCase={currentCase}
@@ -150,8 +168,9 @@ export default function CaseCockpitPage() {
         <DocumentsTab
           currentCase={currentCase}
           documents={caseDocumentList}
-          onValidateDocument={(documentId, status) => {
-            validateDocument(documentId, status);
+          focusKey={requestedFocus}
+          onValidateDocument={(documentId, status, reviewNotes) => {
+            validateDocument(documentId, status, reviewNotes);
             notify(status === 'validated' ? 'Document validated' : 'Document rejected');
           }}
           onCreateTask={(payload) => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileWarning, Upload } from 'lucide-react';
 import { Case, Document, Task } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,8 @@ import { RequestRecordsModal } from '@/components/modals/RequestRecordsModal';
 interface DocumentsTabProps {
   currentCase: Case;
   documents: Document[];
-  onValidateDocument: (documentId: string, status?: 'validated' | 'rejected') => void;
+  focusKey?: string | null;
+  onValidateDocument: (documentId: string, status?: 'validated' | 'rejected', reviewNotes?: string) => void;
   onCreateTask: (payload: {
     title: string;
     type: Task['type'];
@@ -22,14 +23,22 @@ interface DocumentsTabProps {
   }) => void;
 }
 
-export function DocumentsTab({ currentCase, documents, onValidateDocument, onCreateTask }: DocumentsTabProps) {
+const matchesFocus = (document: Document, focusKey?: string | null) => {
+  if (!focusKey) return false;
+  return document.type.includes(focusKey) || document.name.toLowerCase().includes(focusKey.replace(/-/g, ' '));
+};
+
+export function DocumentsTab({ currentCase, documents, focusKey, onValidateDocument, onCreateTask }: DocumentsTabProps) {
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [requestTarget, setRequestTarget] = useState<Document | null>(null);
 
   const patientDocs = useMemo(() => documents.filter((document) => document.ownership === 'patient'), [documents]);
   const duswDocs = useMemo(() => documents.filter((document) => document.ownership === 'dusw'), [documents]);
   const nephDocs = useMemo(() => documents.filter((document) => document.ownership === 'nephrologist'), [documents]);
-  const sharedDocs = useMemo(() => documents.filter((document) => document.ownership === 'shared'), [documents]);
+  const sharedDocs = useMemo(
+    () => documents.filter((document) => document.ownership === 'shared' && document.source !== 'external-retrieval'),
+    [documents]
+  );
   const externalDocs = useMemo(() => documents.filter((document) => document.source === 'external-retrieval'), [documents]);
 
   const requiredTotal = documents.filter((document) => document.status !== 'expired').length;
@@ -38,6 +47,14 @@ export function DocumentsTab({ currentCase, documents, onValidateDocument, onCre
   const hardBlocksMissing = hardBlockDocs.filter((document) => document.status !== 'validated');
   const hardBlocksCleared = hardBlocksMissing.length === 0;
   const isRecordsStage = currentCase.stage === 'records-collection';
+
+  useEffect(() => {
+    if (!focusKey) return;
+    const target = window.document.querySelector('[data-doc-focus-target="true"]');
+    if (target instanceof HTMLElement) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [focusKey, documents]);
 
   return (
     <div className='space-y-4'>
@@ -104,8 +121,9 @@ export function DocumentsTab({ currentCase, documents, onValidateDocument, onCre
             <DocumentRow
               key={document.id}
               document={document}
+              highlighted={matchesFocus(document, focusKey)}
               onValidate={() => onValidateDocument(document.id, 'validated')}
-              onReject={() => onValidateDocument(document.id, 'rejected')}
+              onReject={(reviewNotes) => onValidateDocument(document.id, 'rejected', reviewNotes)}
             />
           ))
         )}
@@ -120,8 +138,9 @@ export function DocumentsTab({ currentCase, documents, onValidateDocument, onCre
             <DocumentRow
               key={document.id}
               document={document}
+              highlighted={matchesFocus(document, focusKey)}
               onValidate={() => onValidateDocument(document.id, 'validated')}
-              onReject={() => onValidateDocument(document.id, 'rejected')}
+              onReject={(reviewNotes) => onValidateDocument(document.id, 'rejected', reviewNotes)}
               onRequest={
                 document.status === 'required'
                   ? () => {
@@ -144,8 +163,9 @@ export function DocumentsTab({ currentCase, documents, onValidateDocument, onCre
             <DocumentRow
               key={document.id}
               document={document}
+              highlighted={matchesFocus(document, focusKey)}
               onValidate={() => onValidateDocument(document.id, 'validated')}
-              onReject={() => onValidateDocument(document.id, 'rejected')}
+              onReject={(reviewNotes) => onValidateDocument(document.id, 'rejected', reviewNotes)}
               onRequest={
                 document.status === 'required'
                   ? () => {
@@ -166,8 +186,9 @@ export function DocumentsTab({ currentCase, documents, onValidateDocument, onCre
             <DocumentRow
               key={document.id}
               document={document}
+              highlighted={matchesFocus(document, focusKey)}
               onValidate={() => onValidateDocument(document.id, 'validated')}
-              onReject={() => onValidateDocument(document.id, 'rejected')}
+              onReject={(reviewNotes) => onValidateDocument(document.id, 'rejected', reviewNotes)}
               onRequest={
                 document.status === 'required'
                   ? () => {
@@ -190,6 +211,7 @@ export function DocumentsTab({ currentCase, documents, onValidateDocument, onCre
             <DocumentRow
               key={document.id}
               document={document}
+              highlighted={matchesFocus(document, focusKey)}
               onValidate={() => onValidateDocument(document.id, 'validated')}
               onRequest={
                 document.status === 'required'

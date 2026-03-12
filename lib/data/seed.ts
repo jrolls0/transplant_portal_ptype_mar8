@@ -1,7 +1,7 @@
 import { addDays, formatISO } from 'date-fns';
 import { clinics, mockUsers, patientNames } from '@/lib/data/mockUsers';
 import { calculateSLAStatus } from '@/lib/utils/slaCalculations';
-import { AuditEvent, Case, Decision, Document, Message, SeedData, Task, User, UserRole } from '@/types';
+import { AuditEvent, Case, Decision, Document, IEFormResponses, Message, SeedData, Task, User, UserRole } from '@/types';
 
 const baseDate = new Date('2026-02-17T09:00:00.000Z');
 
@@ -9,6 +9,69 @@ const iso = (daysOffset: number, hourOffset = 0) => {
   const date = addDays(baseDate, daysOffset);
   date.setHours(date.getHours() + hourOffset);
   return formatISO(date);
+};
+
+type IEProfile = 'clean' | 'minor-flags' | 'major-flags';
+
+const hasSubmittedIEForm = (stage: Case['stage']) => !['new-referral', 'patient-onboarding', 'initial-todos'].includes(stage);
+
+const generateIEResponses = (patientIndex: number, profile: IEProfile): IEFormResponses => {
+  const completedAt = iso(-6 - patientIndex);
+
+  if (profile === 'clean') {
+    return {
+      onDialysis: 'yes',
+      eGFR: 10 + (patientIndex % 7),
+      heightFeet: 5,
+      heightInches: 4 + (patientIndex % 8),
+      weightLbs: 148 + patientIndex * 3,
+      usCitizenOrResident: 'yes',
+      needsOtherOrganTransplant: 'no',
+      usesSupplementalOxygen: 'no',
+      heartSurgeryLast6Months: 'no',
+      receivingCancerTreatment: 'no',
+      recreationalDrugUse: 'no',
+      hasNonHealingWounds: 'no',
+      completedAt
+    };
+  }
+
+  if (profile === 'minor-flags') {
+    return {
+      onDialysis: 'yes',
+      eGFR: 'unknown',
+      heightFeet: 5,
+      heightInches: 3 + (patientIndex % 9),
+      weightLbs: 142 + patientIndex * 2,
+      usCitizenOrResident: 'not-sure',
+      needsOtherOrganTransplant: 'no',
+      usesSupplementalOxygen: 'no',
+      heartSurgeryLast6Months: 'yes',
+      receivingCancerTreatment: 'no',
+      recreationalDrugUse: 'prefer-not-to-answer',
+      hasNonHealingWounds: 'no',
+      additionalHealthInfo: 'Patient reports controlled hypertension and wants coordinator review before submitting outside records.',
+      completedAt
+    };
+  }
+
+  return {
+    onDialysis: 'yes',
+    eGFR: 8,
+    heightFeet: 5,
+    heightInches: 10,
+    weightLbs: 186,
+    usCitizenOrResident: 'yes',
+    needsOtherOrganTransplant: 'yes',
+    usesSupplementalOxygen: 'yes',
+    heartSurgeryLast6Months: 'no',
+    receivingCancerTreatment: 'no',
+    recreationalDrugUse: 'yes',
+    hasNonHealingWounds: 'yes',
+    additionalHealthInfo:
+      'Patient shared active recovery efforts and a diabetic foot wound under treatment. Social work and medical review coordination recommended.',
+    completedAt
+  };
 };
 
 const user = (role: UserRole) => mockUsers.find((u) => u.role === role) as User;
@@ -81,6 +144,7 @@ const baseCase = (
       governmentId: true,
       insuranceCard: true
     },
+    ieFormResponses: opts.ieFormResponses,
     ieConfirmReviewComplete: opts.ieConfirmReviewComplete ?? true,
     contactAttempts: opts.contactAttempts ?? 0,
     lastContactAttempt: opts.lastContactAttempt,
@@ -101,7 +165,7 @@ const baseCase = (
   };
 };
 
-const mockCases: Case[] = [
+const seededCases: Case[] = [
   baseCase('case-001', 'TC-2024-0142', 0, 'specialist-review', {
     assignedPTC: userById('ptc-1'),
     ptcAssignedAt: iso(-22),
@@ -235,23 +299,6 @@ const mockCases: Case[] = [
     slaDueDate: iso(1),
     daysInStage: 1,
     flags: ['Assign PTC'],
-    ieConfirmReviewComplete: false
-  }),
-  baseCase('case-011', 'TC-2025-0210', 10, 'new-referral', {
-    stageEnteredAt: iso(-1),
-    slaDueDate: iso(1),
-    daysInStage: 1,
-    consent: {
-      roiSigned: false,
-      smsConsent: false,
-      emailConsent: false,
-      carePartnerConsent: false
-    },
-    initialTodosComplete: {
-      inclusionExclusion: false,
-      governmentId: false,
-      insuranceCard: false
-    },
     ieConfirmReviewComplete: false
   }),
   baseCase('case-012', 'TC-2025-0211', 11, 'patient-onboarding', {
@@ -552,6 +599,53 @@ const mockCases: Case[] = [
   })
 ];
 
+const ieProfilesByCaseId: Partial<Record<string, IEProfile>> = {
+  'case-002': 'minor-flags',
+  'case-005': 'minor-flags',
+  'case-007': 'major-flags',
+  'case-010': 'minor-flags',
+  'case-014': 'minor-flags',
+  'case-016': 'major-flags',
+  'case-018': 'minor-flags',
+  'case-019': 'major-flags',
+  'case-022': 'minor-flags',
+  'case-024': 'major-flags',
+  'case-029': 'minor-flags',
+  'case-030': 'minor-flags',
+  'case-032': 'minor-flags'
+};
+
+const ieResponseOverridesByCaseId: Partial<Record<string, IEFormResponses>> = {
+  'case-009': {
+    onDialysis: 'yes',
+    eGFR: 12,
+    heightFeet: 5,
+    heightInches: 4,
+    weightLbs: 265,
+    usCitizenOrResident: 'yes',
+    needsOtherOrganTransplant: 'no',
+    usesSupplementalOxygen: 'no',
+    heartSurgeryLast6Months: 'no',
+    receivingCancerTreatment: 'no',
+    recreationalDrugUse: 'yes',
+    hasNonHealingWounds: 'no',
+    additionalHealthInfo: 'Patient disclosed active substance use concerns and needs BMI review before screening can proceed.',
+    completedAt: iso(-14)
+  }
+};
+
+const mockCases: Case[] = seededCases.map((currentCase, index) =>
+  hasSubmittedIEForm(currentCase.stage)
+    ? {
+        ...currentCase,
+        ieFormResponses:
+          currentCase.ieFormResponses ??
+          ieResponseOverridesByCaseId[currentCase.id] ??
+          generateIEResponses(index, ieProfilesByCaseId[currentCase.id] ?? 'clean')
+      }
+    : currentCase
+);
+
 const task = (
   id: string,
   caseId: string,
@@ -583,15 +677,13 @@ const task = (
 });
 
 const mockTasks: Task[] = [
-  task('task-001', 'case-009', 'Review I/E Responses', 'review-ie-responses', 'front-desk', 'pending', -2, 'urgent'),
   task('task-002', 'case-002', 'Validate Insurance Card', 'review-document', 'front-desk', 'pending', -1, 'high'),
   task('task-003', 'case-019', 'Send End Referral Letter (Patient + Clinic)', 'send-end-letter', 'front-desk', 'pending', -1, 'high'),
   task('task-004', 'case-006', 'EXTERNAL STEP - Confirm in Surginet', 'confirm-surginet', 'front-desk', 'pending', 0, 'high', {
     isExternalStep: true,
     externalSystem: 'Surginet'
   }),
-  task('task-005', 'case-010', 'Confirm I/E Review', 'confirm-ie-review', 'front-desk', 'pending', 0, 'high'),
-  task('task-006', 'case-013', 'Review Initial TODO Packet', 'review-document', 'front-desk', 'pending', 1, 'medium'),
+  task('task-005', 'case-010', 'Review I/E Responses', 'confirm-ie-review', 'front-desk', 'pending', 0, 'high'),
   task('task-007', 'case-014', 'Collect Missing I/E Values', 'collect-missing-info', 'front-desk', 'pending', -1, 'high'),
   task('task-008', 'case-007', 'Request Medicare 2728', 'request-records', 'ptc', 'pending', -3, 'urgent'),
   task('task-009', 'case-008', 'Retrieve Missing Clinic Packet', 'request-records', 'ptc', 'in-progress', -1, 'high'),
@@ -653,11 +745,9 @@ const mockTasks: Task[] = [
   }),
   task('task-028', 'case-007', 'Escalate hard-block to Senior', 'partial-packet-decision', 'ptc', 'pending', -2, 'urgent'),
   task('task-029', 'case-020', 'Send End Referral Letter (Patient + Clinic)', 'send-end-letter', 'front-desk', 'pending', -1, 'high'),
-  task('task-030', 'case-011', 'Contact Patient for Onboarding', 'send-message', 'front-desk', 'pending', 1, 'medium'),
-  task('task-031', 'case-021', 'Review Initial TODO Packet', 'review-document', 'front-desk', 'pending', 2, 'medium'),
-  task('task-032', 'case-022', 'Confirm I/E Review', 'confirm-ie-review', 'front-desk', 'pending', 1, 'high'),
+  task('task-032', 'case-022', 'Review I/E Responses', 'confirm-ie-review', 'front-desk', 'pending', 1, 'high'),
   task('task-033', 'case-023', 'Record Scheduling Huddle', 'scheduling-huddle', 'front-desk', 'pending', 2, 'medium'),
-  task('task-034', 'case-024', 'Review I/E Responses', 'review-ie-responses', 'front-desk', 'pending', 1, 'high'),
+  task('task-034', 'case-024', 'Route Case', 'review-ie-responses', 'front-desk', 'pending', 1, 'high'),
   task('task-035', 'case-025', 'Record Scheduling Huddle', 'scheduling-huddle', 'front-desk', 'pending', 2, 'medium'),
   task('task-036', 'case-026', 'Education Follow-up Outreach', 'education-follow-up', 'ptc', 'pending', -1, 'urgent'),
   task('task-037', 'case-027', 'Contact Patient for Onboarding', 'send-message', 'front-desk', 'pending', 2, 'medium'),
@@ -839,122 +929,210 @@ const mockDecisions: Decision[] = [
   )
 ];
 
-const doc = (
-  id: string,
-  caseId: string,
-  name: string,
-  type: string,
-  ownership: Document['ownership'],
-  status: Document['status'],
-  source: Document['source'],
-  isHardBlock = false,
-  opts: Partial<Document> = {}
-): Document => ({
-  id,
-  caseId,
-  name,
-  type,
-  ownership,
-  status,
-  isHardBlock,
-  source,
-  uploadedAt: opts.uploadedAt,
-  uploadedBy: opts.uploadedBy,
-  reviewedAt: opts.reviewedAt,
-  reviewedBy: opts.reviewedBy,
-  reviewNotes: opts.reviewNotes,
-  expiresAt: opts.expiresAt
-});
-
-const mockDocuments: Document[] = [
-  doc('doc-001', 'case-001', 'Government ID', 'government-id', 'patient', 'validated', 'patient', false, {
-    uploadedAt: iso(-32),
-    reviewedAt: iso(-31),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-002', 'case-001', 'Insurance Card', 'insurance-card', 'patient', 'validated', 'patient', false, {
-    uploadedAt: iso(-32),
-    reviewedAt: iso(-31),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-003', 'case-001', 'Inclusion/Exclusion Form', 'inclusion-exclusion-form', 'patient', 'validated', 'patient', false, {
-    uploadedAt: iso(-31),
-    reviewedAt: iso(-30),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-004', 'case-001', 'Medicare 2728 Form', 'medicare-2728', 'dusw', 'validated', 'clinic', true, {
-    uploadedAt: iso(-28),
-    reviewedAt: iso(-27),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-005', 'case-001', 'Dialysis Treatment Summary', 'dialysis-summary', 'dusw', 'validated', 'clinic', false, {
-    uploadedAt: iso(-28),
-    reviewedAt: iso(-27),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-006', 'case-001', 'Lab Results (last 3 mo)', 'lab-results', 'nephrologist', 'validated', 'clinic', false, {
-    uploadedAt: iso(-27),
-    reviewedAt: iso(-26),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-007', 'case-001', 'Cardiology Clearance', 'cardiology-clearance', 'shared', 'needs-review', 'clinic', false, {
-    uploadedAt: iso(-22)
-  }),
-  doc('doc-008', 'case-001', 'Hepatitis Panel', 'hepatitis-panel', 'nephrologist', 'required', 'clinic', false),
-  doc('doc-009', 'case-001', 'Outside Cardiology Records', 'outside-cardiology-records', 'shared', 'validated', 'external-retrieval', false, {
-    uploadedAt: iso(-22),
-    reviewedAt: iso(-21),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-010', 'case-001', 'PCP Records (last 2 years)', 'pcp-records', 'shared', 'required', 'external-retrieval', false),
-  doc('doc-011', 'case-007', 'Medicare 2728 Form', 'medicare-2728', 'dusw', 'required', 'clinic', true),
-  doc('doc-012', 'case-007', 'Dialysis Treatment Summary', 'dialysis-summary', 'dusw', 'received', 'clinic', false, {
-    uploadedAt: iso(-11)
-  }),
-  doc('doc-013', 'case-007', 'Lab Results (last 3 mo)', 'lab-results', 'nephrologist', 'received', 'clinic', false, {
-    uploadedAt: iso(-11)
-  }),
-  doc('doc-014', 'case-008', 'Medicare 2728 Form', 'medicare-2728', 'dusw', 'validated', 'clinic', true, {
-    uploadedAt: iso(-13),
-    reviewedAt: iso(-12),
-    reviewedBy: userById('fd-2')
-  }),
-  doc('doc-015', 'case-008', 'Hepatitis Panel', 'hepatitis-panel', 'nephrologist', 'required', 'clinic', false),
-  doc('doc-016', 'case-015', 'Dialysis Treatment Summary', 'dialysis-summary', 'dusw', 'validated', 'clinic', false, {
-    uploadedAt: iso(-5),
-    reviewedAt: iso(-4),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-017', 'case-015', 'Lab Results (last 3 mo)', 'lab-results', 'nephrologist', 'validated', 'clinic', false, {
-    uploadedAt: iso(-5),
-    reviewedAt: iso(-4),
-    reviewedBy: userById('fd-1')
-  }),
-  doc('doc-018', 'case-015', 'Hepatitis Panel', 'hepatitis-panel', 'nephrologist', 'required', 'clinic', false),
-  doc('doc-019', 'case-016', 'Dialysis Treatment Summary', 'dialysis-summary', 'dusw', 'validated', 'clinic', false, {
-    uploadedAt: iso(-8),
-    reviewedAt: iso(-7),
-    reviewedBy: userById('fd-2')
-  }),
-  doc('doc-020', 'case-016', 'Lab Results (last 3 mo)', 'lab-results', 'nephrologist', 'validated', 'clinic', false, {
-    uploadedAt: iso(-8),
-    reviewedAt: iso(-7),
-    reviewedBy: userById('fd-2')
-  }),
-  doc('doc-021', 'case-003', 'Insurance Card', 'insurance-card', 'patient', 'needs-review', 'patient', false, {
-    uploadedAt: iso(-1)
-  }),
-  doc('doc-022', 'case-004', 'Insurance Card', 'insurance-card', 'patient', 'received', 'patient', false, {
-    uploadedAt: iso(-2)
-  }),
-  doc('doc-023', 'case-013', 'Government ID', 'government-id', 'patient', 'required', 'patient', false),
-  doc('doc-024', 'case-014', 'Inclusion/Exclusion Form', 'inclusion-exclusion-form', 'patient', 'received', 'patient', false, {
-    uploadedAt: iso(-2)
-  }),
-  doc('doc-025', 'case-011', 'Referral Packet', 'referral-packet', 'shared', 'received', 'clinic', false, {
-    uploadedAt: iso(-1)
-  })
+const clinicPacketStages: Case['stage'][] = [
+  'records-collection',
+  'medical-records-review',
+  'specialist-review',
+  'final-decision',
+  'education',
+  'scheduling',
+  'scheduled',
+  'ended',
+  're-referral-review'
 ];
+
+const clinicPacketOverrides: Record<string, Partial<Record<string, Document['status']>>> = {
+  'case-007': {
+    'cms-2728': 'required',
+    'dialysis-records': 'received',
+    'current-labs': 'received',
+    'sw-assessment': 'required',
+    'neph-notes': 'received',
+    'h-and-p': 'required',
+    'med-list': 'received'
+  },
+  'case-008': {
+    'cms-2728': 'validated',
+    'dialysis-records': 'needs-review',
+    'current-labs': 'validated',
+    'sw-assessment': 'required',
+    'neph-notes': 'validated',
+    'h-and-p': 'received',
+    'med-list': 'received'
+  },
+  'case-015': {
+    'cms-2728': 'validated',
+    'dialysis-records': 'validated',
+    'current-labs': 'needs-review',
+    'sw-assessment': 'validated',
+    'neph-notes': 'validated',
+    'h-and-p': 'validated',
+    'med-list': 'required'
+  },
+  'case-030': {
+    'cms-2728': 'validated',
+    'dialysis-records': 'validated',
+    'current-labs': 'needs-review',
+    'sw-assessment': 'validated',
+    'neph-notes': 'validated',
+    'h-and-p': 'required',
+    'med-list': 'received'
+  }
+};
+
+const patientDocumentOverrides: Record<string, Partial<Record<string, Document['status']>>> = {
+  'case-002': {
+    'insurance-front': 'needs-review',
+    'insurance-back': 'needs-review'
+  }
+};
+
+const generateDocumentsForCase = (currentCase: Case, patientIndex: number): Document[] => {
+  const docs: Document[] = [];
+  const reviewer = userById(patientIndex % 2 === 0 ? 'fd-1' : 'fd-2');
+  const uploadDate = iso(-18 - patientIndex);
+  const reviewDate = iso(-17 - patientIndex);
+  const isClinicPacketStage = clinicPacketStages.includes(currentCase.stage);
+  const patientOverrides = patientDocumentOverrides[currentCase.id] ?? {};
+
+  const addDocument = (
+    name: string,
+    type: string,
+    ownership: Document['ownership'],
+    status: Document['status'],
+    source: Document['source'],
+    isHardBlock = false,
+    overrides: Partial<Document> = {}
+  ) => {
+    docs.push({
+      id: overrides.id ?? `doc-${currentCase.id}-${type}`,
+      caseId: currentCase.id,
+      name,
+      type,
+      ownership,
+      status,
+      isHardBlock,
+      source,
+      uploadedAt: status === 'required' ? undefined : overrides.uploadedAt ?? uploadDate,
+      uploadedBy: overrides.uploadedBy,
+      reviewedAt: status === 'validated' ? overrides.reviewedAt ?? reviewDate : overrides.reviewedAt,
+      reviewedBy: status === 'validated' ? overrides.reviewedBy ?? reviewer : overrides.reviewedBy,
+      reviewNotes: overrides.reviewNotes,
+      expiresAt: overrides.expiresAt
+    });
+  };
+
+  if (currentCase.stage === 'new-referral') {
+    return docs;
+  }
+
+  const roiStatus: Document['status'] = currentCase.consent.roiSigned
+    ? currentCase.stage === 'patient-onboarding'
+      ? 'needs-review'
+      : currentCase.stage === 'initial-todos'
+        ? 'needs-review'
+        : 'validated'
+    : 'required';
+
+  addDocument('ROI - ChristianaCare', 'roi-christiana', 'patient', roiStatus, 'patient');
+  addDocument('ROI - Dialysis Records', 'roi-dialysis', 'patient', roiStatus, 'patient');
+
+  if (currentCase.stage === 'patient-onboarding') {
+    return docs;
+  }
+
+  const govFrontStatus: Document['status'] =
+    currentCase.stage === 'initial-todos'
+      ? currentCase.initialTodosComplete.governmentId
+        ? 'needs-review'
+        : 'needs-review'
+      : 'validated';
+  const govBackStatus: Document['status'] =
+    currentCase.stage === 'initial-todos'
+      ? currentCase.initialTodosComplete.governmentId
+        ? 'needs-review'
+        : 'required'
+      : 'validated';
+  const insuranceFrontStatus: Document['status'] =
+    currentCase.stage === 'initial-todos'
+      ? currentCase.initialTodosComplete.insuranceCard
+        ? 'needs-review'
+        : 'needs-review'
+      : 'validated';
+  const insuranceBackStatus: Document['status'] =
+    currentCase.stage === 'initial-todos'
+      ? currentCase.initialTodosComplete.insuranceCard
+        ? 'needs-review'
+        : 'required'
+      : 'validated';
+
+  addDocument('Government ID (Front)', 'gov-id-front', 'patient', patientOverrides['gov-id-front'] ?? govFrontStatus, 'patient');
+  addDocument('Government ID (Back)', 'gov-id-back', 'patient', patientOverrides['gov-id-back'] ?? govBackStatus, 'patient');
+  addDocument(
+    'Insurance Card (Front)',
+    'insurance-front',
+    'patient',
+    patientOverrides['insurance-front'] ?? insuranceFrontStatus,
+    'patient'
+  );
+  addDocument(
+    'Insurance Card (Back)',
+    'insurance-back',
+    'patient',
+    patientOverrides['insurance-back'] ?? insuranceBackStatus,
+    'patient'
+  );
+
+  if (isClinicPacketStage) {
+    const defaultPacketStatus: Document['status'] = currentCase.stage === 'records-collection' ? 'needs-review' : 'validated';
+    const overrides = clinicPacketOverrides[currentCase.id] ?? {};
+
+    addDocument(
+      'CMS-2728 (ESRD Medical Evidence Report)',
+      'cms-2728',
+      'dusw',
+      overrides['cms-2728'] ?? defaultPacketStatus,
+      'clinic',
+      true
+    );
+    addDocument(
+      'Dialysis Treatment Records (Last 3 Months)',
+      'dialysis-records',
+      'dusw',
+      overrides['dialysis-records'] ?? defaultPacketStatus,
+      'clinic'
+    );
+    addDocument('Current Laboratory Results', 'current-labs', 'dusw', overrides['current-labs'] ?? defaultPacketStatus, 'clinic');
+    addDocument('Social Work Assessment', 'sw-assessment', 'dusw', overrides['sw-assessment'] ?? defaultPacketStatus, 'clinic');
+    addDocument('Nephrology Progress Notes', 'neph-notes', 'nephrologist', overrides['neph-notes'] ?? defaultPacketStatus, 'clinic');
+    addDocument('History & Physical', 'h-and-p', 'nephrologist', overrides['h-and-p'] ?? defaultPacketStatus, 'clinic');
+    addDocument('Current Medication List', 'med-list', 'nephrologist', overrides['med-list'] ?? defaultPacketStatus, 'clinic');
+  }
+
+  if (['case-001', 'case-008', 'case-015', 'case-030'].includes(currentCase.id)) {
+    const hepatitisStatus: Document['status'] =
+      currentCase.id === 'case-030' ? 'needs-review' : currentCase.id === 'case-001' || currentCase.id === 'case-008' || currentCase.id === 'case-015' ? 'required' : 'validated';
+
+    addDocument('Hepatitis Panel', 'hepatitis-panel', 'nephrologist', hepatitisStatus, 'clinic');
+  }
+
+  if (currentCase.id === 'case-001') {
+    addDocument('Cardiology Clearance', 'cardiology-clearance', 'shared', 'needs-review', 'clinic', false, {
+      uploadedAt: iso(-22),
+      reviewNotes: 'Cardiology note uploaded and awaiting final specialist review.'
+    });
+    addDocument('Outside Cardiology Records', 'outside-cardiology-records', 'shared', 'validated', 'external-retrieval', false, {
+      uploadedAt: iso(-22),
+      reviewedAt: iso(-21),
+      reviewedBy: userById('fd-1')
+    });
+    addDocument('PCP Records (last 2 years)', 'pcp-records', 'shared', 'required', 'external-retrieval');
+  }
+
+  return docs;
+};
+
+const mockDocuments: Document[] = mockCases.flatMap((currentCase, index) => generateDocumentsForCase(currentCase, index));
 
 const message = (
   id: string,
@@ -1084,16 +1262,18 @@ const mockAudit: AuditEvent[] = [
   audit('audit-017', 'case-016', 'SPECIALIST_CONFLICT', 'Specialist outcomes conflict requires senior review.', userById('ptc-1'), -2),
   audit('audit-018', 'case-003', 'FINANCIAL_CLEARED', 'Financial screening completed and cleared.', userById('fin-1'), -1),
   audit('audit-019', 'case-014', 'MISSING_IE', 'Missing I/E values identified for follow-up.', userById('fd-2'), -3),
-  audit('audit-020', 'case-011', 'NEW_REFERRAL', 'New referral received from clinic portal.', userById('fd-1'), -1)
+  audit('audit-020', 'case-027', 'NEW_REFERRAL', 'New referral received from clinic portal.', userById('fd-1'), -1)
 ];
 
+const removedCaseIds = new Set(['case-013', 'case-021', 'case-023']);
+
 const seedData: SeedData = {
-  cases: mockCases,
-  tasks: mockTasks,
-  documents: mockDocuments,
-  messages: mockMessages,
-  decisions: mockDecisions,
-  audit: mockAudit
+  cases: mockCases.filter((currentCase) => !removedCaseIds.has(currentCase.id)),
+  tasks: mockTasks.filter((task) => !removedCaseIds.has(task.caseId)),
+  documents: mockDocuments.filter((document) => !removedCaseIds.has(document.caseId)),
+  messages: mockMessages.filter((message) => !removedCaseIds.has(message.caseId)),
+  decisions: mockDecisions.filter((decision) => !removedCaseIds.has(decision.caseId)),
+  audit: mockAudit.filter((event) => !removedCaseIds.has(event.caseId))
 };
 
 export function createSeedData(): SeedData {

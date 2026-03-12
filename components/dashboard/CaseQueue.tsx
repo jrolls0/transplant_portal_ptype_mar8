@@ -5,9 +5,17 @@ interface CaseQueueProps {
   cases: Case[];
   taskByCaseId?: Record<string, Task | undefined>;
   actionsByCaseId?: Record<string, React.ReactNode>;
+  openCaseHrefByCaseId?: Record<string, string | undefined>;
+  openCaseLabelByCaseId?: Record<string, string | undefined>;
 }
 
-export function CaseQueue({ cases, taskByCaseId = {}, actionsByCaseId = {} }: CaseQueueProps) {
+export function CaseQueue({
+  cases,
+  taskByCaseId = {},
+  actionsByCaseId = {},
+  openCaseHrefByCaseId = {},
+  openCaseLabelByCaseId = {}
+}: CaseQueueProps) {
   if (cases.length === 0) {
     return <div className='rounded-xl border border-dashed border-slate-300 p-6 text-sm text-slate-500'>No cases in this queue.</div>;
   }
@@ -20,6 +28,8 @@ export function CaseQueue({ cases, taskByCaseId = {}, actionsByCaseId = {} }: Ca
           currentCase={currentCase}
           task={taskByCaseId[currentCase.id]}
           actions={actionsByCaseId[currentCase.id]}
+          openCaseHref={openCaseHrefByCaseId[currentCase.id]}
+          openCaseLabel={openCaseLabelByCaseId[currentCase.id]}
         />
       ))}
     </div>

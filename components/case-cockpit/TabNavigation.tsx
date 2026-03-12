@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 
 const tabs = [
   { id: 'summary', label: 'Summary' },
+  { id: 'ie-responses', label: 'I/E Responses' },
   { id: 'tasks', label: 'Tasks' },
   { id: 'documents', label: 'Documents' },
   { id: 'messages', label: 'Messages' },

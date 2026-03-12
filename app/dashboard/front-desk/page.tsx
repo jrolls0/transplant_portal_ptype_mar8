@@ -32,7 +32,7 @@ export default function FrontDeskDashboardPage() {
   useRequireAuth();
 
   const router = useRouter();
-  const { hydrated, cases, tasks, documents, completeTask, validateDocument, logExternalStep, routeInitialScreening } = useCases();
+  const { hydrated, cases, tasks, documents, completeTask, logExternalStep, routeInitialScreening } = useCases();
   const { notify } = useNotification();
 
   const [activeTab, setActiveTab] = useState<QueueTabId>('all');
@@ -49,7 +49,6 @@ export default function FrontDeskDashboardPage() {
   const overdue = frontDeskPending.filter((task) => task.slaStatus === 'overdue');
   const dueToday = frontDeskPending.filter((task) => task.slaStatus === 'at-risk');
   const upcoming = frontDeskPending.filter((task) => task.slaStatus === 'on-track');
-  const completed = tasks.filter((task) => task.assignedToRole === 'front-desk' && task.status === 'completed');
 
   const taskByCase = useMemo(
     () =>
@@ -122,51 +121,10 @@ export default function FrontDeskDashboardPage() {
       if (!task) return;
 
       if (task.type === 'review-document') {
-        const doc = documents.find((item) => item.caseId === currentCase.id && item.status !== 'validated');
-        actionMap[currentCase.id] = (
-          <>
-            <Button
-              variant='secondary'
-              size='sm'
-              onClick={() => {
-                if (!doc) return;
-                validateDocument(doc.id, 'validated');
-                completeTask(task.id, 'Document approved.');
-                notify('Document validated');
-              }}
-            >
-              Approve
-            </Button>
-            <Button
-              variant='secondary'
-              size='sm'
-              onClick={() => {
-                if (!doc) return;
-                validateDocument(doc.id, 'rejected');
-                notify('Document rejected');
-              }}
-            >
-              Reject
-            </Button>
-          </>
-        );
         return;
       }
 
-      if (task.type === 'confirm-ie-review') {
-        actionMap[currentCase.id] = (
-          <Button
-            size='sm'
-            onClick={() => {
-              completeTask(task.id, 'I/E review confirmed by front desk.');
-              notify('I/E review confirmed');
-            }}
-          >
-            Confirm ✓
-          </Button>
-        );
-        return;
-      }
+      if (task.type === 'confirm-ie-review') return;
 
       if (task.type === 'confirm-surginet') {
         actionMap[currentCase.id] = (
@@ -213,7 +171,48 @@ export default function FrontDeskDashboardPage() {
     });
 
     return actionMap;
-  }, [filteredCases, taskByCase, documents, validateDocument, completeTask, notify, router]);
+  }, [filteredCases, taskByCase, router]);
+
+  const openCaseHrefByCaseId = useMemo(() => {
+    const hrefMap: Record<string, string> = {};
+
+    filteredCases.forEach((currentCase) => {
+      const task = taskByCase[currentCase.id];
+      if (task?.type === 'review-document') {
+        const docNeedingReview = documents.find(
+          (item) =>
+            item.caseId === currentCase.id &&
+            item.ownership === 'patient' &&
+            (item.status === 'needs-review' || item.status === 'received')
+        );
+
+        const focusKey = docNeedingReview?.type.startsWith('insurance') ? 'insurance' : docNeedingReview?.type ?? 'documents';
+        hrefMap[currentCase.id] = `/cases/${currentCase.id}?tab=documents&focus=${focusKey}`;
+      }
+
+      if (task?.type === 'confirm-ie-review') {
+        hrefMap[currentCase.id] = `/cases/${currentCase.id}?tab=ie-responses`;
+      }
+    });
+
+    return hrefMap;
+  }, [filteredCases, taskByCase, documents]);
+
+  const openCaseLabelByCaseId = useMemo(() => {
+    const labelMap: Record<string, string> = {};
+
+    filteredCases.forEach((currentCase) => {
+      if (taskByCase[currentCase.id]?.type === 'review-document') {
+        labelMap[currentCase.id] = 'Review Document';
+      }
+
+      if (taskByCase[currentCase.id]?.type === 'confirm-ie-review') {
+        labelMap[currentCase.id] = 'Review Responses';
+      }
+    });
+
+    return labelMap;
+  }, [filteredCases, taskByCase]);
 
   const selectedExternalTask = selectedTaskId ? tasks.find((task) => task.id === selectedTaskId) : undefined;
   const selectedExternalCase = selectedExternalTask ? cases.find((currentCase) => currentCase.id === selectedExternalTask.caseId) : undefined;
@@ -235,8 +234,7 @@ export default function FrontDeskDashboardPage() {
         items={[
           { label: 'Overdue', value: overdue.length, tone: 'danger' },
           { label: 'Due Today', value: dueToday.length, tone: 'warning' },
-          { label: 'Upcoming', value: upcoming.length, tone: 'success' },
-          { label: 'Completed', value: completed.length, tone: 'neutral' }
+          { label: 'Upcoming', value: upcoming.length, tone: 'success' }
         ]}
       />
 
@@ -258,6 +256,8 @@ export default function FrontDeskDashboardPage() {
               )}
               taskByCaseId={taskByCase}
               actionsByCaseId={actionsByCaseId}
+              openCaseHrefByCaseId={openCaseHrefByCaseId}
+              openCaseLabelByCaseId={openCaseLabelByCaseId}
             />
           </div>
 
@@ -271,6 +271,8 @@ export default function FrontDeskDashboardPage() {
               )}
               taskByCaseId={taskByCase}
               actionsByCaseId={actionsByCaseId}
+              openCaseHrefByCaseId={openCaseHrefByCaseId}
+              openCaseLabelByCaseId={openCaseLabelByCaseId}
             />
           </div>
 
@@ -284,6 +286,8 @@ export default function FrontDeskDashboardPage() {
               )}
               taskByCaseId={taskByCase}
               actionsByCaseId={actionsByCaseId}
+              openCaseHrefByCaseId={openCaseHrefByCaseId}
+              openCaseLabelByCaseId={openCaseLabelByCaseId}
             />
           </div>
         </div>

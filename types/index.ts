@@ -116,6 +116,23 @@ export interface Consent {
   carePartnerConsent: boolean;
 }
 
+export interface IEFormResponses {
+  onDialysis: 'yes' | 'no';
+  eGFR: number | 'unknown';
+  heightFeet: number;
+  heightInches: number;
+  weightLbs: number;
+  usCitizenOrResident: 'yes' | 'no' | 'not-sure';
+  needsOtherOrganTransplant: 'yes' | 'no' | 'not-sure';
+  usesSupplementalOxygen: 'yes' | 'no';
+  heartSurgeryLast6Months: 'yes' | 'no' | 'not-sure';
+  receivingCancerTreatment: 'yes' | 'no';
+  recreationalDrugUse: 'yes' | 'no' | 'prefer-not-to-answer';
+  hasNonHealingWounds: 'yes' | 'no';
+  additionalHealthInfo?: string;
+  completedAt: string;
+}
+
 export interface Case {
   id: string;
   caseNumber: string;
@@ -137,6 +154,7 @@ export interface Case {
     governmentId: boolean;
     insuranceCard: boolean;
   };
+  ieFormResponses?: IEFormResponses;
   ieConfirmReviewComplete: boolean;
   contactAttempts: number;
   lastContactAttempt?: string;

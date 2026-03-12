@@ -31,7 +31,7 @@ export const stageDefinitions: StageDefinition[] = [
     shortName: 'Follow',
     order: 4,
     slaDays: 3,
-    description: 'Front desk confirms I/E review and closes gaps.'
+    description: 'Front desk reviews I/E responses and closes gaps.'
   },
   {
     id: 'intermediary-step',

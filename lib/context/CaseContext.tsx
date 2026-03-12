@@ -9,7 +9,7 @@ import { maybeAdvanceCaseStage } from '@/lib/utils/stageTransitions';
 import { Case, Decision, Message, SeedData, Task, UserRole } from '@/types';
 import { useAuth } from '@/lib/context/AuthContext';
 
-const STORAGE_KEY = 'transplant-demo-state';
+const STORAGE_KEY = 'transplant-demo-state-v6';
 
 interface CreateTaskInput {
   caseId: string;
@@ -59,7 +59,7 @@ interface CaseContextValue extends SeedData {
   takePatient: (caseId: string) => void;
   assignPTC: (caseId: string, ptcUserId: string) => void;
   routeInitialScreening: (caseId: string, destination: 'financial' | 'senior', notes: string) => void;
-  validateDocument: (documentId: string, status?: 'validated' | 'rejected') => void;
+  validateDocument: (documentId: string, status?: 'validated' | 'rejected', reviewNotes?: string) => void;
   recordDecision: (decisionId: string, selectedOption: string, rationale: string) => void;
   createDecision: (input: { caseId: string; type: Decision['type']; title: string; options: string[] }) => void;
   addCaseFlag: (caseId: string, flag: string) => void;
@@ -598,7 +598,7 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
-  const validateDocument = (documentId: string, status: 'validated' | 'rejected' = 'validated') => {
+  const validateDocument = (documentId: string, status: 'validated' | 'rejected' = 'validated', reviewNotes?: string) => {
     setData((current) => {
       const next = structuredClone(current);
       const target = next.documents.find((item) => item.id === documentId);
@@ -606,7 +606,44 @@ export function CaseProvider({ children }: { children: React.ReactNode }) {
       target.status = status;
       target.reviewedAt = nowIso();
       target.reviewedBy = actor ?? target.reviewedBy;
-      withAudit(next, target.caseId, 'DOCUMENT_REVIEWED', `${target.name} marked ${status}.`);
+      target.reviewNotes = status === 'rejected' ? reviewNotes : undefined;
+
+      const insuranceReviewTask = next.tasks.find(
+        (task) =>
+          task.caseId === target.caseId &&
+          task.type === 'review-document' &&
+          task.status !== 'completed' &&
+          task.title.toLowerCase().includes('insurance card')
+      );
+
+      if (insuranceReviewTask) {
+        const insuranceDocuments = next.documents.filter(
+          (document) =>
+            document.caseId === target.caseId &&
+            ['insurance-front', 'insurance-back'].includes(document.type)
+        );
+
+        const insuranceCardsValidated =
+          insuranceDocuments.length === 2 &&
+          insuranceDocuments.every((document) => document.status === 'validated');
+
+        if (insuranceCardsValidated) {
+          insuranceReviewTask.status = 'completed';
+          insuranceReviewTask.completedAt = nowIso();
+          insuranceReviewTask.completedBy = actor ?? insuranceReviewTask.completedBy;
+          insuranceReviewTask.completionNotes = 'Insurance card front and back validated from document checklist.';
+
+          withAudit(
+            next,
+            target.caseId,
+            'TASK_COMPLETED',
+            `${insuranceReviewTask.title} completed automatically after insurance cards were validated.`,
+            { taskId: insuranceReviewTask.id }
+          );
+        }
+      }
+
+      withAudit(next, target.caseId, 'DOCUMENT_REVIEWED', `${target.name} marked ${status}.`, reviewNotes ? { reviewNotes } : undefined);
       return next;
     });
   };
